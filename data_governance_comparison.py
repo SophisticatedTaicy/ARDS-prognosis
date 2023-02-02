@@ -132,7 +132,7 @@ class model_process:
         plt.title('Rapid death ROCs', fontweight='bold', fontsize=15)
         plt.legend(loc='lower right')
         plt.grid()
-        plt.savefig(base_picture_path + str(self.datatype) + '_' + 'Rapid_death_24.jpg')
+        plt.savefig(base_picture_path + str(self.datatype) + '_' + 'Rapid_death_24.svg', format='svg')
         plt.show()
 
     # 在多个机器学习模型上融合训练数据，在统一测试集上查看模型性能
@@ -150,13 +150,13 @@ class model_process:
             model.fit(x_train, y_train)
             if name == 'Perceptron':
                 test_predict_proba = model._predict_proba_lr(x_test)
-                fpr, tpr, threshold =roc_curve(y_test, test_predict_proba[:, 1], pos_label=1)
+                fpr, tpr, threshold = roc_curve(y_test, test_predict_proba[:, 1], pos_label=1)
             elif name == 'LinearRegression' or name == 'BayesianRidge':
                 test_predict_proba = model.predict(x_test)
-                fpr, tpr, threshold =roc_curve(y_test, test_predict_proba, pos_label=1)
+                fpr, tpr, threshold = roc_curve(y_test, test_predict_proba, pos_label=1)
             else:
                 test_predict_proba = model.predict_proba(x_test)
-                fpr, tpr, threshold =roc_curve(y_test, test_predict_proba[:, 1], pos_label=1)
+                fpr, tpr, threshold = roc_curve(y_test, test_predict_proba[:, 1], pos_label=1)
             test_auc = round(auc(fpr, tpr), 3)
             plt.plot(fpr[:-1:30], tpr[:-1:30], label=r'%s (area=%.3f)' % (name, test_auc), color=color, marker=mark,
                      lw=1.5)

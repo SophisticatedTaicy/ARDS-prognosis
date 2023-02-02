@@ -411,11 +411,11 @@ class analysis_plot:
     def plot_images(self, data, name=None):
         if name:
             self.name = name
-        self.plot_stacked_histogram(data)
-        self.patient_consist(data)
-        self.plot_hospital_stay(data)
-        self.admission_source_word_cloud_plot(data)
-        self.admission_source_plot(data, vertical=False)
+        # self.plot_stacked_histogram(data)
+        # self.patient_consist(data)
+        # self.plot_hospital_stay(data)
+        # self.admission_source_word_cloud_plot(data)
+        self.admission_source_plot(data, vertical=True)
         # severity = data['severity']
         # details = data['detail']
         # self.filter_death_by_severity(details, severity)
@@ -460,7 +460,7 @@ class analysis_plot:
                                      colormap=colormap, background_color='white', collocations=False)
             wc.generate(data_word_txt)
             plt.imshow(wc)
-        plt.savefig('admission_source.svg', format='svg')
+        plt.savefig('admission_source.eps', format='eps', dpi=600)
         self.save_pic('admission_source')
         plt.show()
 
@@ -473,7 +473,7 @@ class analysis_plot:
         def trans_admission_word_count(sub_data, selected=False, n=0):
             chinese_word_dict = {}
             english_word_dict = {}
-            mpl.rcParams['font.sans-serif'] = ['Times New Roman']
+            # mpl.rcParams['font.sans-serif'] = ['Times New Roman']
             nums = []
             for item in sub_data:
                 nums.append(len([item for item in np.array(sub_data[item]) if item]))
@@ -502,20 +502,20 @@ class analysis_plot:
         colors = ['red', 'orange', 'yellowgreen', 'deepskyblue']
         # mpl.rcParams['font.sans-serif'] = ['SimHei']
         if vertical:
-            height = 0.02
+            height = 0.2
             for sub_data, name, rate, color in zip(data, dataset_names, rates, colors):
                 sub_admission = sub_data[diagnosis_abbrevation_list]
                 chinese, english = trans_admission_word_count(sub_admission, True, 5)
-                y = np.arange(1, 6, 1) + rate * height
-                # mpl.rcParams['font.sans-serif'] = ['SimHei']
-                # plt.barh(english.values(), y, xerr=0.005, label=name, color=color, zorder=5,
-                #          error_kw={'ecolor': '0.2', 'capsize': 6})
-                plt.barh(list(english.values()), y, height=height, xerr=0.005, label=name, color=color, zorder=5)
-                for a, b, label in zip(y + rate * height, list(english.values()), english.keys()):
-                    plt.text(b, a, label, rotation=0, wrap=True, verticalalignment='center', zorder=6)
-            ax.xaxis.set_major_formatter(ticker.PercentFormatter(xmax=5))
-            plt.xlabel('Percentage of Admission Diagnosis', fontweight='bold', fontsize=15)
-            plt.ylabel('Admission Diagnosis', fontweight='bold', fontsize=15)
+                y = np.arange(5, 0, -1) + rate * height
+                mpl.rcParams['font.sans-serif'] = ['Time New Roman']
+                plt.barh(y, list(english.values()), height=height, label=name, color=color, zorder=5)
+                for a, b, label in zip(y, list(english.values()), english.keys()):
+                    plt.text(b, a, label, verticalalignment='center', zorder=6)
+            ax.xaxis.set_major_formatter(ticker.PercentFormatter(xmax=1))
+            plt.xlabel('Percentage of Admission Diagnosis', fontweight='bold', fontsize=15,
+                       fontproperties='Times New Roman')
+            plt.ylabel('Admission Diagnosis', fontweight='bold', fontsize=15, fontproperties='Times New Roman')
+            plt.xticks(np.arange(0, 0.85, 0.2))
         else:
             width = 0.2
             for sub_data, name, rate, color in zip(data, dataset_names, rates, colors):
@@ -532,7 +532,7 @@ class analysis_plot:
             plt.ylabel('Percentage of Admission Diagnosis', fontweight='bold', fontsize=15)
             plt.xlabel('Admission Diagnosis', fontweight='bold', fontsize=15)
         plt.title('Top 5 Admission Diagnosis for Each Dataset', fontweight='bold', fontsize=15)
-        plt.legend(labels=dataset_names)
+        plt.legend(labels=dataset_names, loc=4)
         plt.savefig('admission.svg', format='svg')
         plt.show()
 
@@ -586,7 +586,7 @@ class analysis_plot:
             box = ax.get_position()
             ax.set_position([box.x0, box.y0, box.width * 0.9, box.height])
             ax.legend(loc='center left', bbox_to_anchor=(1, 0.6))
-            plt.savefig('age_distribution.svg', format='svg')
+            plt.savefig('age_distribution.emf', format='emf')
             # self.save_pic('age_distribution')
             plt.show()
 

@@ -142,15 +142,15 @@ base_colors = [
 model_names = ['GBDT', 'XGBoost', 'RF', 'adaboost', 'bagging', 'stacking', 'BayesianRidge', 'LR', 'linearRegression',
                'Perceptron']
 
-univariate_header = drug_list + diagnosis_abbrevation_list + person_info_list + dynamic_median_list + ['outcome']
+univariate_header = drug_list + diagnosis_abbrevation_list + person_info_list + dynamic_median_list
 result_header = ['id'] + drug_list + diagnosis_abbrevation_list + person_info_list + dynamic_detail_list + extra_list
 xiu_header = ['id'] + drug_list + diagnosis_abbrevation_list + person_info_list + special_list(dynamic_item_list,
                                                                                                ['median', 'std',
                                                                                                 'mean']) + extra_list
 outcome_dict = {
-    'Spontaneous recovery': 0,
-    'Long stay': 1,
-    'Rapid death': 2
+    'Spontaneous Recovery': 0,
+    # 'Long Stay': 1,
+    # 'Rapid Death': 2
 }
 
 apache_header = ['id', 'gender', 'teachtype', 'admitsource', 'age', 'admitdiagnosis', 'meds', 'thrombolytics',

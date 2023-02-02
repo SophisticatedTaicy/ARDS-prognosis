@@ -20,6 +20,7 @@ base_csv_path = './ARDS/combine/csvfiles'
 base_path = os.path.dirname(os.path.abspath(__file__)) + '\ARDS'
 from ARDS.data_process.process import Processing
 
+
 # 在多个机器学习模型上融合训练数据，在统一测试集上查看模型性能
 # 使用不同模型测试融合数据性能
 def various_model(x_train, x_test, y_train, y_test):
@@ -36,7 +37,7 @@ def various_model(x_train, x_test, y_train, y_test):
             if name == 'Perceptron':
                 test_predict_proba = model._predict_proba_lr(x_test)
                 fpr, tpr, threshold = roc_curve(y_test, test_predict_proba[:, 1], pos_label=1)
-            elif name == 'LinearRegression' or name == 'BayesianRidge':
+            elif name == 'Linear Regression' or name == 'Bayesian Ridge':
                 test_predict_proba = model.predict(x_test)
                 fpr, tpr, threshold = roc_curve(y_test, test_predict_proba, pos_label=1)
             else:
@@ -56,7 +57,7 @@ def various_model(x_train, x_test, y_train, y_test):
     plt.grid()
     plt.gca()
     plt.legend(loc=4, fontsize=7)
-    plt.savefig(base_picture_path + 'combine_models_' + str(outcome) + '.png')
+    plt.savefig(base_picture_path + 'combine_models_' + str(outcome) + '.svg', format='svg')
     plt.show()
 
 
