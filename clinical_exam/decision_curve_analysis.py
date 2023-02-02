@@ -9,7 +9,7 @@ import pandas as pd
 from matplotlib import pyplot as plt, pyplot
 from pandas import DataFrame
 from sklearn import metrics
-from sklearn.calibration import calibration_curve, CalibrationDisplay
+from sklearn.calibration import calibration_curve
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix, roc_curve, auc
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
@@ -197,24 +197,25 @@ def univariate_analysis(data, label, columns, model, param, name):
                                                         shuffle=True, random_state=42)
     x_train, x_test = standard_data_by_white(x_train, x_test)
     # 输入数据为已归一化后数据 无须归一化
-    clf = XGBoost_none
-    clf.fit(x_train, y_train)
-    # best_estimator = gclf.best_estimator_
+    gclf.fit(x_train, y_train)
+    best_estimator = gclf.best_estimator_
     # y_pred = best_estimator.predict_proba(x_train)
     # fpr, tpr, threshold = roc_curve(y_train, y_pred[:, 1], pos_label=1)
     # test_auc = auc(fpr, tpr)
     # plt.plot(fpr, tpr, label=r'top 15 train (area=%0.3f)' % test_auc, color='g')
-    y_pred = clf.predict_proba(x_test)[:, 1]
-    prob_true, prob_pred = calibration_curve(y_test, y_pred, n_bins=10)
-    disp = CalibrationDisplay(prob_true, prob_pred, y_pred)
-    disp.plot()
-    # fpr, tpr, threshold = roc_curve(y_test, y_pred[:, 1], pos_label=1)
-    # test_auc = auc(fpr, tpr)
-    # plt.plot(fpr, tpr, label=r'top 15 test (area=%0.3f)' % test_auc, color='b')
-    # plt.xlabel('False positive rate', fontsize=15)
-    # plt.ylabel('True positive rate', fontsize=15)
-    # plt.xlim([-0.05, 1.05])
-    # plt.ylim([-0.05, 1.05])
+    y_pred = best_estimator.predict_proba(x_test)
+    fpr, tpr, threshold = roc_curve(y_test, y_pred[:, 1], pos_label=1)
+    test_auc = auc(fpr, tpr)
+    plt.plot(fpr, tpr, label=r'top 15 test (area=%0.3f)' % test_auc, color='b')
+    plt.xlabel('False positive rate', fontsize=15)
+    plt.ylabel('True positive rate', fontsize=15)
+    plt.xlim([-0.05, 1.05])
+    plt.ylim([-0.05, 1.05])
+    # curve the calibration
+    # y_pred = clf.predict_proba(x_test)[:, 1]
+    # prob_true, prob_pred = calibration_curve(y_test, y_pred, n_bins=10)
+    # disp = CalibrationDisplay(prob_true, prob_pred, y_pred)
+    # disp.plot()
     plt.legend()
     plt.grid()
     plt.legend(loc=4, fontsize=7)
@@ -250,5 +251,6 @@ if __name__ == '__main__':
     origin = pd.read_csv('test_1.csv')
     label = origin.iloc[:, 0]
     data = origin.iloc[:, 1:]
-    # univariate_analysis(data, label, origin.columns[1:], XGBoost_none, {}, 'XGBoost')
-    plot_decision_curve_analysis_on_test_set(XGBoost_none, data, label, 'XGBoost')
+    univariate_analysis(data, label, origin.columns[1:], XGBoost_none, {}, 'XGBoost')
+    # plot_decision_curve_analysis_on_test_set(XGBoost_none, data, label, 'XGBoost')
+    # plot_single_model_test_curve(XGBoost_none,np.array(data),np.array(label),'XGBoost')

@@ -124,6 +124,8 @@ def special_list(list, types):
     return new_list
 
 
+
+
 def concat_array(list):
     new = []
     for sublist in list:

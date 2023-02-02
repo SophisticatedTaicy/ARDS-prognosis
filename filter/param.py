@@ -28,6 +28,10 @@ diagnosis_abbrevation_list = ['ACSD', 'AMI', 'ARF', 'Arrhythmia', 'Asthma_Emphys
                               'Diabetic_Ketoacidosis', 'GI_Bleed', 'GI_Obstruction', 'Neurologic', 'Overdose',
                               'Pneumonia', 'RespiMO', 'Sepsis', 'Thoracotomy', 'Trauma', 'Valve_Disease',
                               'other_disease']
+diagnosis_chinese_list = ['急性冠状动脉', '急性心肌梗塞', '急性肾衰竭', '心律不整', '哮喘', '癌症', '心脏骤停', '心因性休克',
+                          '心血管病', '其他心血管', '中风', '胸痛', '昏迷', '心脏搭桥', '酮症酸中毒', '胃肠道出血',
+                          '肠或腹膜粘连伴梗阻', '神经', '药物中毒', '肺炎', '呼吸系统', '脓毒症', '开胸术', '创伤', '心脏瓣膜',
+                          '其他疾病']
 diagnosis_list = ['Acute Coronary\nSyndrome', 'Acute Myocardial\nInfarction', 'Acute Renal\nFailure', 'Arrhythmia',
                   'Asthma or\nEmphysema', 'Cancer', 'Cardiac Arrest', 'Cardiogenic Shock', 'Cardiovascular\n(Medical)',
                   'Cardiovascular\n(Other)', 'Cerebrovascular\nAccident/Stroke', 'Chest Pain\nUnknown Origin', 'Coma',

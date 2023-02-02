@@ -10,8 +10,12 @@ from pandas import DataFrame
 from scipy import stats
 
 import filter.param
-from filter.common import read_file
+from filter.common import read_file, concat_array
 from filter.param import *
+from matplotlib import ticker
+
+global dataset_names
+dataset_names = ['eICU', 'MIMIC III', 'MIMIC IV', 'ARDset']
 
 
 class analysis_plot:
@@ -407,42 +411,348 @@ class analysis_plot:
     def plot_images(self, data, name=None):
         if name:
             self.name = name
-        severity = data['severity']
-        details = data['detail']
-        self.filter_death_by_severity(details, severity)
-        self.severity_plot(data)
-        ages = data['age']
-        self.age_plot(ages)
-        diseases = data.iloc[:, 10:36]
-        self.disease_plot(diseases)
-        apacheivs = data['admission_score']
-        self.apacheIV_plot(apacheivs)
-        unitstays = data['unit']
-        hosstays = data['hospital']
-        self.stay_boxplot(unitstays, hosstays)
-        admitsource = data['admitsource']
-        self.admit_source(admitsource)
+        self.plot_stacked_histogram(data)
+        self.patient_consist(data)
+        self.plot_hospital_stay(data)
+        self.admission_source_word_cloud_plot(data)
+        self.admission_source_plot(data, vertical=False)
+        # severity = data['severity']
+        # details = data['detail']
+        # self.filter_death_by_severity(details, severity)
+        # self.severity_plot(data)
+        # ages = data['age']
+        # self.age_plot(ages)
+        # diseases = data.iloc[:, 10:36]
+        # self.disease_plot(diseases)
+        # apacheivs = data['admission_score']
+        # self.apacheIV_plot(apacheivs)
+        # unitstays = data['unit']
+        # hosstays = data['hospital']
+        # self.stay_boxplot(unitstays, hosstays)
+        # admitsource = data['admitsource']
+        # self.admit_source(admitsource)
 
-    def save_pic(self, type):
-        self.path = self.name + '_' + type + '.jpg'
+    def admission_source_word_cloud_plot(self, data):
+        import jieba  # 导入jieba分词模块
+        import wordcloud
+        import imageio.v2 as imageio
+        from matplotlib import colors as mat_colors
+        def mark_to_chinese_word(dataset_name, sub_data):
+            final_txt_list = ''
+            for column_mark, chinese_word in zip(diagnosis_abbrevation_list, diagnosis_chinese_list):
+                sub_disease = sub_data[column_mark]
+                mark_sum = len([item for item in np.array(sub_disease) if item == 1])
+                final_txt_list = final_txt_list + (column_mark + ',') * mark_sum
+            with open('pictures/' + dataset_name + '_diagnosis_chinese_word_cloud.txt', 'w') as f:
+                f.write(final_txt_list)
+
+        fig = plt.figure()
+        sub_plots = [221, 222, 223, 224]
+        pic = imageio.imread('pictures/img.png')
+        pic = np.array(pic)
+        for i, dataset_name, sub_plot in zip(range(len(data)), dataset_names, sub_plots):
+            fig.add_subplot(sub_plot)
+            sub_data = data[i][diagnosis_abbrevation_list]
+            mark_to_chinese_word(dataset_name, sub_data)
+            data_word_txt = open('pictures/' + dataset_name + '_diagnosis_chinese_word_cloud.txt', 'r').read()
+            colormap = mat_colors.ListedColormap(colors)
+            wc = wordcloud.WordCloud(mask=pic, font_path='SimHei.ttf', width=800, height=600, max_words=40, font_step=3,
+                                     colormap=colormap, background_color='white', collocations=False)
+            wc.generate(data_word_txt)
+            plt.imshow(wc)
+        plt.savefig('admission_source.svg', format='svg')
+        self.save_pic('admission_source')
+        plt.show()
+
+    def admission_source_plot(self, data, vertical=False):
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.grid(zorder=0)
+        from pylab import mpl
+        # mpl.rcParams['font.sans-serif'] = ['SimHei']
+
+        def trans_admission_word_count(sub_data, selected=False, n=0):
+            chinese_word_dict = {}
+            english_word_dict = {}
+            mpl.rcParams['font.sans-serif'] = ['Times New Roman']
+            nums = []
+            for item in sub_data:
+                nums.append(len([item for item in np.array(sub_data[item]) if item]))
+            for chinese, english, num in zip(diagnosis_chinese_list, diagnosis_abbrevation_list, nums):
+                chinese_word_dict[chinese] = num
+                english_word_dict[english] = num
+            chinese_word_dict = {k: round(v / len(sub_data), 3) for k, v in chinese_word_dict.items()}
+            english_word_dict = {k: round(v / len(sub_data), 3) for k, v in english_word_dict.items()}
+            # sort by value
+            chinese_word_dict = list(chinese_word_dict.items())
+            english_word_dict = list(english_word_dict.items())
+            chinese_word_dict.sort(key=lambda x: x[1], reverse=True)
+            english_word_dict.sort(key=lambda x: x[1], reverse=True)
+            # sort by key
+            # chinese_word_dict.sort(key=lambda x: x[0], reverse=True)
+            # english_word_dict.sort(key=lambda x: x[0], reverse=True)
+            if selected:
+                chinese_word_dict = chinese_word_dict[:n]
+                english_word_dict = english_word_dict[:n]
+            chinese_word_dict = {item[0]: item[1] for item in chinese_word_dict}
+            english_word_dict = {item[0]: item[1] for item in english_word_dict}
+            return chinese_word_dict, english_word_dict
+
+        rates = [-1.5, -0.5, 0.5, 1.5]
+
+        colors = ['red', 'orange', 'yellowgreen', 'deepskyblue']
+        # mpl.rcParams['font.sans-serif'] = ['SimHei']
+        if vertical:
+            height = 0.02
+            for sub_data, name, rate, color in zip(data, dataset_names, rates, colors):
+                sub_admission = sub_data[diagnosis_abbrevation_list]
+                chinese, english = trans_admission_word_count(sub_admission, True, 5)
+                y = np.arange(1, 6, 1) + rate * height
+                # mpl.rcParams['font.sans-serif'] = ['SimHei']
+                # plt.barh(english.values(), y, xerr=0.005, label=name, color=color, zorder=5,
+                #          error_kw={'ecolor': '0.2', 'capsize': 6})
+                plt.barh(list(english.values()), y, height=height, xerr=0.005, label=name, color=color, zorder=5)
+                for a, b, label in zip(y + rate * height, list(english.values()), english.keys()):
+                    plt.text(b, a, label, rotation=0, wrap=True, verticalalignment='center', zorder=6)
+            ax.xaxis.set_major_formatter(ticker.PercentFormatter(xmax=5))
+            plt.xlabel('Percentage of Admission Diagnosis', fontweight='bold', fontsize=15)
+            plt.ylabel('Admission Diagnosis', fontweight='bold', fontsize=15)
+        else:
+            width = 0.2
+            for sub_data, name, rate, color in zip(data, dataset_names, rates, colors):
+                sub_admission = sub_data[diagnosis_abbrevation_list]
+                chinese, english = trans_admission_word_count(sub_admission, True, 5)
+                x = np.arange(len(english))
+                mpl.rcParams['font.sans-serif'] = ['Time New Roman']
+                plt.bar(x + rate * width, english.values(), width, yerr=0.005, label=name, color=color, zorder=5,
+                        error_kw={'ecolor': '0.2', 'capsize': 6})
+                for a, b, label in zip(x + rate * width, list(english.values()), english.keys()):
+                    # plt.text(a, b, label, rotation=30, wrap=False)
+                    plt.text(a, b, label, rotation=-90, wrap=True, verticalalignment='center', zorder=6)
+            ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=1))
+            plt.ylabel('Percentage of Admission Diagnosis', fontweight='bold', fontsize=15)
+            plt.xlabel('Admission Diagnosis', fontweight='bold', fontsize=15)
+        plt.title('Top 5 Admission Diagnosis for Each Dataset', fontweight='bold', fontsize=15)
+        plt.legend(labels=dataset_names)
+        plt.savefig('admission.svg', format='svg')
+        plt.show()
+
+    # plot stacked histogram for each datasets and group them up into a union
+    # x—axis:eICU,MIMIC III,MIMIC IV and ARDset
+    # y-axis:split patient age into 18-25,25-40,40-60,60-89,and compute patient rate in each age gap
+    def plot_stacked_histogram(self, data):
+        plt.rcParams['font.sans-serif'] = ['Times New Roman']
+        plt.rcParams['axes.unicode_minus'] = False
+
+        def plot_each_stacked(stacks, stack_names, stack_label):
+            """
+            @param stacks: current age group
+            @param stack_names: item names, such as eICU,MIMIC III, MIMIC IV and ARDset.
+            @param stack_label: age group name
+            """
+            fig, ax = plt.subplots(figsize=(8, 6))
+            ax.grid(zorder=0)
+            # color_base = np.array([128, 4, 128])
+            red = 125
+            origin_green = 200
+            blue = 255
+            colors = ['coral', 'sandybrown', 'gold', 'orange']
+            colors = ['gold', 'sandybrown', 'orange', 'darkorange', 'red']
+            # colors.reverse()
+            # colors = ['brown', 'gray', 'olive', 'pink']
+            for i, color in zip(range(len(stacks)), colors):
+                if i > 0:
+                    bottom = []
+                    for k in range(len(stacks[i])):
+                        bottom.append(sum(stacks[:i, k]))
+                else:
+                    bottom = [0] * len(stacks[i])
+                green = origin_green - 60 * i
+                # ax.bar(stack_names, stacks[i], width=0.45, bottom=bottom, label=stack_label[i],
+                #        color=np.array([red, green, blue]) / 255)
+                ax.bar(stack_names, stacks[i], width=0.45, bottom=bottom, label=stack_label[i],
+                       color=color, zorder=3)
+                for i, num, height in zip(range(len(stacks[i])), stacks[i], bottom):
+                    if num > 0:
+                        ax.text(i, height + num / 2, '%.0f' % num, ha='center', va='top', zorder=3, fontsize=15)
+            ax.set_ylabel('Percentage of ARDS Patients', fontweight='bold', fontsize=20,
+                          fontproperties='Times New Roman')
+            ax.set_title('Age Distribution in ARDS Datasets', fontweight='bold', fontproperties='Times New Roman',
+                         fontsize=20)
+            # ax.set_xlabel('Datasets', fontweight='bold', fontsize=20, fontproperties='Times New Roman')
+            # 坐标轴显示百分比，若实际数值为小于1的小数，xmax设置为1，即xmax=1
+            ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=100, decimals=1))
+            plt.xticks(fontproperties='Times New Roman')
+            plt.yticks(fontproperties='Times New Roman')
+            box = ax.get_position()
+            ax.set_position([box.x0, box.y0, box.width * 0.9, box.height])
+            ax.legend(loc='center left', bbox_to_anchor=(1, 0.6))
+            plt.savefig('age_distribution.svg', format='svg')
+            # self.save_pic('age_distribution')
+            plt.show()
+
+        def compute_patient_rate_in_each_gap(data):
+            """
+            @param data: data group
+            @return: four arrays which respectively contain four age gap groups
+            """
+            sum = len(data)
+            group_18 = []
+            group_33 = []
+            group_48 = []
+            group_63 = []
+            group_78 = []
+            for i in range(sum):
+                current_group = data[i]['age']
+                current_sum = len([item for item in current_group if item > 0])
+                age_18 = 100 * len([item for item in current_group if item >= 18 and item < 33]) / current_sum
+                age_33 = 100 * len([item for item in current_group if item >= 33 and item < 48]) / current_sum
+                age_48 = 100 * len([item for item in current_group if item >= 48 and item < 63]) / current_sum
+                age_63 = 100 * len([item for item in current_group if item >= 63 and item < 78]) / current_sum
+                age_78 = 100 * len([item for item in current_group if item >= 78]) / current_sum
+                group_18.append(round(age_18, 1))
+                group_33.append(round(age_33, 1))
+                group_48.append(round(age_48, 1))
+                group_63.append(round(age_63, 1))
+                group_78.append(round(age_78, 1))
+            return group_18, group_33, group_48, group_63, group_78
+
+        x_labels = ['eICU', 'MIMIC III', 'MIMIC IV', 'ARDset']
+        group_18, group_33, group_48, group_63, group_78 = compute_patient_rate_in_each_gap(data)
+        stacks = np.array([group_18, group_33, group_48, group_63, group_78])
+        plot_each_stacked(stacks, x_labels,
+                          ['18-33 years', '33-48 years', '48-63 years', '63-78 years', '>=78  years'])
+
+    def patient_consist(self, data):
+        def plot_pie_graph(fig, ax1_num, ax2_num, one_classes, one_data, two_classes, two_data):
+            from matplotlib.patches import ConnectionPatch
+            # 制画布
+            explode = (0, 0.1)
+            ax1 = fig.add_subplot(ax1_num)
+            ax2 = fig.add_subplot(ax2_num)
+            # fig.subplots_adjust(wspace=0)
+            fig.subplots_adjust(left=0.08, bottom=0.0, right=0.96, top=0.99, wspace=0.01, hspace=0.05)
+            # 大饼图的制作
+            ax1.pie(one_data, autopct='%1.1f%%', startangle=60, radius=1.2, explode=explode,
+                    labels=one_classes, colors=['lightgreen', 'lightcoral'], pctdistance=0.45,
+                    textprops={'fontsize': 20, 'color': 'black'}, labeldistance=0.75)
+            # l_text是饼图对着文字大小，p_text是饼图内文字大小
+            # for l, p in zip(l_text, p_text):
+            #     l.set_size(30)
+            #     p.set_size(20)
+
+            # 小饼图的制作
+            width = 0.8
+            patches, l_text, p_text = ax2.pie(two_data, autopct='%1.1f%%', startangle=90, labels=two_classes,
+                                              labeldistance=1.3, radius=0.5, shadow=True,
+                                              colors=['brown', 'tomato', 'coral'])
+            for l, p in zip(l_text, p_text):
+                l.set_size(18)
+                p.set_size(15)
+
+            # 使用ConnectionPatch画出两个饼图的间连线
+            # 先得到饼图边缘的数据
+            theta1, theta2 = ax1.patches[len(one_classes) - 1].theta1, ax1.patches[len(one_classes) - 1].theta2
+            center, r = ax1.patches[len(one_classes) - 1].center, ax1.patches[len(one_classes) - 1].r
+
+            # 画出上边缘的连线
+            x = r * np.cos(np.pi / 180 * theta2) + center[0]
+            y = np.sin(np.pi / 180 * theta2) + center[1]
+            con = ConnectionPatch(xyA=(-width / 2, 0.5), xyB=(x, y), coordsA='data', coordsB='data', axesA=ax2,
+                                  axesB=ax1)
+            con.set_linewidth(1)
+            con.set_color = ([0, 0, 0])
+            ax2.add_artist(con)
+
+            # 画出下边缘的连线
+            x = r * np.cos(np.pi / 180 * theta1) + center[0]
+            y = np.sin(np.pi / 180 * theta1) + center[1]
+            con = ConnectionPatch(xyA=(-width / 2, -0.5), xyB=(x, y), coordsA='data', coordsB='data', axesA=ax2,
+                                  axesB=ax1)
+            con.set_linewidth(1)
+            con.set_color = ([0, 0, 0])
+            ax2.add_artist(con)
+
+        plt.rcParams['font.sans-serif'] = ['Times New Roman']
+        fig = plt.figure(figsize=(12, 7.5))
+        plt_num = [241, 242, 243, 244, 245, 246, 247, 248]
+        dataset_names = ['eICU', 'MIMIC III', 'MIMIC IV', 'ARDset']
+        for i, name in zip(range(len(data)), dataset_names):
+            sub_data = data[i]
+            one_classes = ['alive', 'expired']
+            patients = len(np.array(sub_data))
+            two_classes = ['severe', 'moderate', 'mild']
+            alive_rate = 100 * len([item for item in sub_data['detail'] if item == 3]) / patients
+            one_data = [round(alive_rate, 1), round(100 - alive_rate, 1)]
+            patient_detail = np.array(sub_data[['detail', 'severity']])
+            expired_severes = len([out for out, ser in patient_detail if out != 3 and ser == 1])
+            expired_moderates = len([out for out, ser in patient_detail if out != 3 and ser == 2])
+            expired_milds = len([out for out, ser in patient_detail if out != 3 and ser == 3])
+            two_data = [expired_severes, expired_moderates, expired_milds]
+            plot_pie_graph(fig, plt_num[2 * i], plt_num[2 * i + 1], one_classes, one_data, two_classes, two_data)
+            plt.title(name, fontweight='bold', fontsize=30, loc='left')
+        # 不显示坐标刻度
+        # plt.xaxis.set_visible(False)
+        # plt.yaxis.set_visible(False)
+        # plt.title('Patients Condition and the Severity of Expired Patients', fontproperties='Times New Roman',
+        #           fontsize=25, loc='left')
+        plt.savefig('patient_condition.svg', format='svg')
+        # self.save_pic('patient_condition')
+        plt.show()
+
+    def plot_hospital_stay(self, data):
+        plt.rcParams['font.sans-serif'] = ['Times New Roman']
+        dataset_names = ['eICU', 'MIMIC III', 'MIMIC IV', 'ARDset']
+        stay_type = ['Hospital stay', 'ICU stay']
+        colors = ['red', 'blue', 'green', 'purple']
+        fig = plt.figure()
+        plt.xticks([]), plt.yticks([])
+        fig.add_subplot(121)
+        for i, color, name in zip(range(len(data)), colors, dataset_names):
+            hospital_data = data[i][['hospital']]
+            sns.distplot(hospital_data, vertical=True, hist=False, kde=False, fit=stats.norm,
+                         fit_kws={'color': color, 'linestyle': '-'}, kde_kws={'label': name + '_' + stay_type[0]})
+        plt.ylabel('Days', fontsize=20, fontweight='bold')
+        plt.xlabel('Density', fontsize=20, fontweight='bold')
+        plt.xticks(np.arange(0, 0.062, 0.02))
+        plt.xlim([0, 0.062])
+        plt.yticks(np.arange(0, 62, 20))
+        plt.grid()
+        plt.ylim([0, 62])
+        plt.legend(labels=dataset_names, title='Hospital Stay')
+        fig.add_subplot(122)
+        for i, color, name in zip(range(len(data)), colors, dataset_names):
+            unit_data = data[i][['unit']]
+            sns.distplot(unit_data, vertical=True, hist=False, kde=False, fit=stats.norm,
+                         kde_kws={'label': name + '_' + stay_type[1]},
+                         fit_kws={'color': color, 'linestyle': 'dashed'})
+        plt.xlabel('Density', fontsize=20, fontweight='bold')
+        plt.xticks(np.arange(0, 0.062, 0.02))
+        plt.xlim([0, 0.062])
+        plt.yticks(np.arange(0, 62, 20))
+        plt.ylim([0, 62])
+        plt.legend(labels=dataset_names, title='ICU Stay')
+        plt.grid()
+        plt.savefig('hospital_stay.svg', format='svg')
+        # self.save_pic('hospital_stay')
+        plt.show()
+
+    def save_pic(self, name):
+        self.name = name
+        self.path = self.name + '.svg'
         self.path = os.path.join(self.basepath, self.path)
         plt.savefig(self.path)
+        print('%s saved in %s ' % (name, self.path))
 
 
 if __name__ == '__main__':
     base_path = 'D:\pycharm\ARDS-prognosis-for-eICU-data\ARDS'
-    # eicu_path = os.path.join('eicu', 'csvfiles')
-    # mimic3_path = os.path.join('mimic', 'mimic3', 'csvfiles')
-    # mimic4_path = os.path.join('mimic', 'mimic4', 'csvfiles')
-    # base_name = 'result_1207'
-    # eicu = read_file(path=os.path.join(base_path, eicu_path), filename=base_name)
-    # mimic3 = read_file(path=os.path.join(base_path, mimic3_path), filename=base_name)
-    # mimic4 = read_file(path=os.path.join(base_path, mimic4_path), filename=base_name)
-    # analyser = analysis_plot(name='eicu')
-    # analyser.plot_images(name='eicu', data=eicu)
-    # analyser.plot_images(name='mimic3', data=mimic3)
-    # analyser.plot_images(name='mimic4', data=mimic4)
     total_path = os.path.join('combine', 'csvfiles')
+    eicu = read_file(path=os.path.join(base_path, total_path), filename='total_eicu')
+    mimic3 = read_file(path=os.path.join(base_path, total_path), filename='total_mimic3')
+    mimic4 = read_file(path=os.path.join(base_path, total_path), filename='total_mimic4')
     total = read_file(path=os.path.join(base_path, total_path), filename='total_data')
+    data = [eicu, mimic3, mimic4, total]
+    ages = [eicu['age'], mimic3['age'], mimic4['age'], total['age']]
     analyser = analysis_plot()
-    analyser.plot_images(data=total, name='total')
+    # analyser.plot_images(data=DataFrame(ages), name='total')
+    analyser.plot_images(data=data)
