@@ -499,7 +499,7 @@ class analysis_plot:
 
         rates = [-1.5, -0.5, 0.5, 1.5]
 
-        colors = ['red', 'orange', 'yellowgreen', 'deepskyblue']
+        colors = ['red', 'blue', 'green', 'purple']
         # mpl.rcParams['font.sans-serif'] = ['SimHei']
         if vertical:
             height = 0.2

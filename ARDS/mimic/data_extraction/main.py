@@ -94,26 +94,27 @@ class MIMIC_Acquisition:
                 dynamic_format = filter_invalid_dynamic_items(dynamic_format)
                 result_dict, dynamic_dict = query_sql.compute_dynamic(stay_id, dynamic_format, header)
                 # 获取当前患者的额外数据信息，如28天预后，24小时后预后以及住院天数等信息
-                outcome, status_28, detail, unitstay, hospitalstay, outcome_48, outcome_72 = query.access_ards_severity_after_enrollment(
-                    stay_id, enrollment)
-                result_dict['outcome'] = outcome
-                result_dict['detail'] = detail
-                result_dict['unit'] = unitstay
-                result_dict['hospital'] = hospitalstay
-                result_dict['status_28'] = status_28
-                result_dict['severity'] = severity
-                result_dict['identification'] = identification
-                result_dict['enrollment'] = enrollment
-                result_dict['outcome_48'] = outcome_48
-                result_dict['outcome_72'] = outcome_72
-                result_dict = DataFrame([result_dict])
+                # outcome, status_28, detail, unitstay, hospitalstay, outcome_48, outcome_72 = query.access_ards_severity_after_enrollment(
+                #     stay_id, enrollment)
+                # result_dict['outcome'] = outcome
+                # result_dict['detail'] = detail
+                # result_dict['unit'] = unitstay
+                # result_dict['hospital'] = hospitalstay
+                # result_dict['status_28'] = status_28
+                # result_dict['severity'] = severity
+                # result_dict['identification'] = identification
+                # result_dict['enrollment'] = enrollment
+                # result_dict['outcome_48'] = outcome_48
+                # result_dict['outcome_72'] = outcome_72
+                # result_dict = DataFrame([result_dict])
                 if self.issave:
-                    save_file(file=result_dict, path=self.path, filename='result_1207', mode='a')
-                    save_file(file=DataFrame(dynamic_dict), path=self.path, filename='dynamic_1207', mode='a')
+                    # save_file(file=result_dict, path=self.path, filename='result_1207', mode='a')
+                    print(dynamic_dict)
+                    save_file(file=DataFrame([dynamic_dict]), path=self.path, filename='dynamic_0203', mode='a')
 
 
 if __name__ == '__main__':
-    mimic_a = MIMIC_Acquisition(type='3', mutilprocess=True, issave=True)
+    mimic_a = MIMIC_Acquisition(type='4', mutilprocess=True, issave=True)
     mimic_a.get_ARDS_datas()
     # datas = read_file(filename='result', path=mimic_a.path)
     # processer = Processing()

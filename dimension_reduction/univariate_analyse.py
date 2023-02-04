@@ -9,7 +9,9 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from sklearn.metrics import auc, roc_curve
 
-from filter.common import standard_data_by_white
+from ARDS.data_process.process import Processing
+from filter.common import standard_data_by_white, data_split_and_combine, judge_label_balance, format_label, \
+    concat_array
 from filter.param import *
 from ml.classification.classify_parameter import GBDT_param, GBDT
 
@@ -125,6 +127,63 @@ class univariate_analysis:
         final_te = compute_auc_changed_by_dimension(data, new_labels, coef_lr)
         return final_te
 
+    def select_specific_columns_and_compute_auc(self, x_train, y_train, x_test, y_test, columns):
+        x_train_new = np.array(x_train[columns])
+        x_test_new = np.array(x_test[columns])
+        x_train_new, x_test_new = standard_data_by_white(x_train_new, x_test_new)
+        # 输入数据为已归一化后数据 无须归一化
+        GBDT.fit(x_train_new, y_train)
+        # best_estimator = gclf.best_estimator_
+        y_pred = GBDT.predict_proba(x_test_new)
+        fpr, tpr, threshold = roc_curve(y_test, y_pred[:, 1], pos_label=1)
+        test_auc = auc(fpr, tpr)
+        return test_auc
+
+    def univate_test(self, x_train, x_test, y_train, y_test, datas, test_name):
+        analyser = univariate_analysis(common_columns)
+        # 设置单变量分析的模型
+        model = LogisticRegression()
+        x_train_new, x_test_new = standard_data_by_white(np.array(x_train), np.array(x_test))
+        model.fit(np.array(x_train_new), np.array(y_train))
+        # 计算各特征优势比的幂
+        coefs = np.exp(model.coef_)
+        # 保存各特征的系数
+        coef_lr = pd.DataFrame({'var': common_columns, 'coef': coefs.flatten()})
+        index_sort = np.abs(coef_lr['coef'] - 1).sort_values().index
+        eicu_aucs = []
+        combine_aucs = []
+        mimic3_aucs = []
+        mimic4_aucs = []
+        # 计算相应auc，按照5的步长划分特征集个数
+        for coef_num in dimensions:
+            coefs = coef_lr.iloc[index_sort, :][-coef_num:]
+            vars = np.array(coefs['var'])
+            eicu_aucs.append(
+                analyser.select_specific_columns_and_compute_auc(datas[0], datas[1], x_test, y_test, vars))
+            mimic3_aucs.append(
+                analyser.select_specific_columns_and_compute_auc(datas[2], datas[3], x_test, y_test, vars))
+            mimic4_aucs.append(
+                analyser.select_specific_columns_and_compute_auc(datas[4], datas[5], x_test, y_test, vars))
+            combine_aucs.append(
+                analyser.select_specific_columns_and_compute_auc(datas[6], datas[7], x_test, y_test, vars))
+            # print('coef_num : %s vars : %s' % (coef_num, vars))
+        aucs = [eicu_aucs, mimic3_aucs, mimic4_aucs, combine_aucs]
+        fig, ax = plt.subplots(figsize=(10, 7.5))
+        colors = ['red', 'orange', 'yellowgreen', 'deepskyblue']
+        for color, dataset_name, auc in zip(colors, dataset_names, aucs):
+            plt.plot(dimensions, auc, 'ro-', color=color, label=dataset_name)
+            plt.xlabel('Dimensions', fontweight='bold', fontsize=15, fontproperties='Times New Roman')
+            plt.ylabel('AUC', fontweight='bold', fontsize=15, fontproperties='Times New Roman')
+            plt.title('%s(test = %s)' % (outcome, test_name), fontweight='bold', fontsize=20,
+                      fontproperties='Times New Roman')
+        ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=1))
+        plt.yticks(np.arange(0.6, 1.05, 0.05))
+        plt.xticks(np.arange(5, 105, 10))
+        plt.grid()
+        plt.legend(labels=dataset_names, loc=4)
+        plt.savefig('%s_test_%s.svg' % (outcome, test_name), format='svg')
+        plt.show()
+
 
 if __name__ == '__main__':
     # 分别对三个数据集划分训练集和测试集
@@ -137,34 +196,54 @@ if __name__ == '__main__':
     coulmns = list(total.columns)
     coulmns.remove('outcome')
     common_columns = coulmns
+    print('common_columns : %s common_columns length : %s' % (common_columns, len(common_columns)))
+    processer = Processing()
+    analyser = univariate_analysis(common_columns)
+    eicu_label = eicu['outcome']
+    mimic3_label = mimic3['outcome']
+    mimic4_label = mimic4['outcome']
+    eicu_data = eicu[common_columns]
+    mimic3_data = mimic3[common_columns]
+    mimic4_data = mimic4[common_columns]
+    while (1):
+        eicu_x_train, eicu_x_test, eicu_y_train_ori, eicu_y_test_ori = train_test_split(eicu_data, eicu_label,
+                                                                                        test_size=0.2)
+        mimic3_x_train, mimic3_x_test, mimic3_y_train_ori, mimic3_y_test_ori = train_test_split(mimic3_data,
+                                                                                                mimic3_label,
+                                                                                                test_size=0.2)
+        mimic4_x_train, mimic4_x_test, mimic4_y_train_ori, mimic4_y_test_ori = train_test_split(mimic4_data,
+                                                                                                mimic4_label,
+                                                                                                test_size=0.2)
+        if judge_label_balance(eicu_y_train_ori, eicu_y_test_ori) and judge_label_balance(mimic3_y_train_ori,
+                                                                                          mimic3_y_test_ori) and judge_label_balance(
+            mimic4_y_train_ori, mimic4_y_test_ori):
+            break
+    # 根据不同预后结果划分标签0、1
     dimensions = np.arange(len(common_columns), 4, -5)
-    print("common_columns length %s and columns : %s" % (len(common_columns), common_columns))
-    eicu_analyser = univariate_analysis(common_columns, datatype='eICU')
-    mimic3_analyser = univariate_analysis(common_columns, datatype='MIMIC III')
-    mimic4_analyser = univariate_analysis(common_columns, datatype='MIMIC IV')
-    total_analyser = univariate_analysis(common_columns, datatype='ARDset')
-    colors = ['red', 'orange', 'yellowgreen', 'deepskyblue']
-    for outcome, outcome_label in outcome_dict.items():
-        eicu_aucs = eicu_analyser.univariate_analysis(outcome, outcome_label, eicu[common_columns], eicu['outcome'],
-                                                      common_columns)
-        mimic3_aucs = mimic3_analyser.univariate_analysis(outcome, outcome_label, mimic3[common_columns],
-                                                          mimic3['outcome'], common_columns)
-        mimic4_aucs = mimic4_analyser.univariate_analysis(outcome, outcome_label, mimic4[common_columns],
-                                                          mimic4['outcome'], common_columns)
-        total_aucs = total_analyser.univariate_analysis(outcome, outcome_label, total[common_columns], total['outcome'],
-                                                        common_columns)
-        aucs = [eicu_aucs, mimic3_aucs, mimic4_aucs, total_aucs]
-        fig, ax = plt.subplots(figsize=(10, 7.5))
-        ax.grid(zorder=0)
-        for color, dataset_name, auc in zip(colors, dataset_names, aucs):
-            plt.plot(dimensions, auc, 'ro-', color=color, label=dataset_name)
-            plt.xlabel('Dimensions', fontweight='bold', fontsize=15, fontproperties='Times New Roman')
-            plt.ylabel('AUC', fontweight='bold', fontsize=15, fontproperties='Times New Roman')
-            plt.title(outcome, fontweight='bold', fontsize=15, fontproperties='Times New Roman')
-        ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=1))
-        plt.yticks(np.arange(0.6, 1.05, 0.05))
-        plt.xticks(np.arange(5, 105, 10))
-        plt.grid()
-        plt.legend(labels=dataset_names, loc=4)
-        plt.savefig('%s.svg' % outcome, format='svg')
-        plt.show()
+    for outcome, label in outcome_dict.items():
+        # 标签转换
+        eicu_y_train = format_label(eicu_y_train_ori, label)
+        eicu_y_test = format_label(eicu_y_test_ori, label)
+        mimic3_y_train = format_label(mimic3_y_train_ori, label)
+        mimic3_y_test = format_label(mimic3_y_test_ori, label)
+        mimic4_y_train = format_label(mimic4_y_train_ori, label)
+        mimic4_y_test = format_label(mimic4_y_test_ori, label)
+        # 融合数据
+        combine_x_train = eicu_x_train.append(mimic3_x_train, ignore_index=True).append(mimic4_x_train)
+        combine_y_train = DataFrame(concat_array([eicu_y_train, mimic3_y_train, mimic4_y_train]))
+        combine_x_test = eicu_x_test.append(mimic3_x_test, ignore_index=True).append(mimic4_x_test)
+        combine_y_test = DataFrame(concat_array([eicu_y_test, mimic3_y_test, mimic4_y_test]))
+        # 数据转换为Dataframe
+        eicu_x_train = DataFrame(eicu_x_train)
+        eicu_x_test = DataFrame(eicu_x_test)
+        mimic3_x_train = DataFrame(mimic3_x_train)
+        mimic3_x_test = DataFrame(mimic3_x_test)
+        mimic4_x_train = DataFrame(mimic4_x_train)
+        mimic4_x_test = DataFrame(mimic4_x_test)
+        datas = (eicu_x_train, eicu_y_train, mimic3_x_train, mimic3_y_train, mimic4_x_train, mimic4_y_train,
+                 combine_x_train, combine_y_train)
+        # 设置单变量分析的模型
+        analyser.univate_test(eicu_x_train, eicu_x_test, eicu_y_train, eicu_y_test, datas, 'eICU')
+        analyser.univate_test(combine_x_train, combine_x_test, combine_y_train, combine_y_test, datas, 'ARDset')
+        analyser.univate_test(mimic3_x_train, mimic3_x_test, mimic3_y_train, mimic3_y_test, datas, 'MIMIC III')
+        analyser.univate_test(mimic4_x_train, mimic4_x_test, mimic4_y_train, mimic4_y_test, datas, 'MIMIC IV')

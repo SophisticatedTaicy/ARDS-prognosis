@@ -5,14 +5,16 @@
 # @File : model_selection.py
 # @Software: PyCharm
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
 from numpy import interp
+from pandas import DataFrame
 from sklearn.metrics import auc, roc_curve
 import os
 
 from sklearn.model_selection import train_test_split
 
-from filter.common import read_file, format_label, data_merge, standard_data_by_white
+from filter.common import read_file, format_label, data_merge, standard_data_by_white, concat_array
 from filter.param import outcome_dict, colors
 
 base_picture_path = './ARDS/combine/pictures/'
@@ -23,7 +25,7 @@ from ARDS.data_process.process import Processing
 
 # 在多个机器学习模型上融合训练数据，在统一测试集上查看模型性能
 # 使用不同模型测试融合数据性能
-def various_model(x_train, x_test, y_train, y_test):
+def various_model(x_train, x_test, y_train, y_test, dataset_name):
     from ml.classification.classify_parameter import base_models, searchCVnames
     # 将训练集和测试集白化
     x_train, x_test = standard_data_by_white(x_train, x_test)
@@ -49,7 +51,7 @@ def various_model(x_train, x_test, y_train, y_test):
         mean_auc = auc(mean_fpr, mean_tpr)
         plt.plot(mean_fpr[:-1:30], mean_tpr[:-1:30], label=r'%s (area=%.3f)' % (name, mean_auc), color=color,
                  marker='o', markersize=2, lw=1.5)
-    plt.title(r'%s' % outcome, fontweight='bold', fontsize=15)
+    plt.title(r'%s(%s)' % (outcome, dataset_name), fontweight='bold', fontsize=20)
     plt.xlabel('False positive rate', fontsize=15, fontweight='bold')
     plt.ylabel('True positive rate', fontsize=15, fontweight='bold')
     plt.xlim([-0.05, 1.05])
@@ -57,25 +59,41 @@ def various_model(x_train, x_test, y_train, y_test):
     plt.grid()
     plt.gca()
     plt.legend(loc=4, fontsize=7)
-    plt.savefig(base_picture_path + 'combine_models_' + str(outcome) + '.svg', format='svg')
+    plt.savefig(base_picture_path + '%s_%s.svg' % (outcome, dataset_name), format='svg')
     plt.show()
 
 
 if __name__ == '__main__':
     # 分别对三个数据集划分训练集和测试集
-    eicu_path = os.path.join('eicu', 'csvfiles')
-    mimic3_path = os.path.join('mimic', 'mimic3', 'csvfiles')
-    mimic4_path = os.path.join('mimic', 'mimic4', 'csvfiles')
-    base_name = 'new_1228'
-    eicu = read_file(path=os.path.join(base_path, eicu_path), filename=base_name)
-    mimic3 = read_file(path=os.path.join(base_path, mimic3_path), filename=base_name)
-    mimic4 = read_file(path=os.path.join(base_path, mimic4_path), filename=base_name)
-    # 找出所有数据集公共列
-    common_columns = list(set(eicu.columns).intersection(set(mimic3.columns), set(mimic4.columns)))
-    print('common columns : %s, common columns length : %s' % (common_columns, len(common_columns)))
+    base_path = 'D:\pycharm\ARDS-prognosis-for-eICU-data\ARDS'
+    total_path = os.path.join('combine', 'csvfiles')
+    eicu = read_file(path=os.path.join(base_path, total_path), filename='merge_eicu')
+    mimic3 = read_file(path=os.path.join(base_path, total_path), filename='merge_mimic3')
+    mimic4 = read_file(path=os.path.join(base_path, total_path), filename='merge_mimic4')
+    total = read_file(path=os.path.join(base_path, total_path), filename='merge_data')
+    coulmns = list(total.columns)
+    coulmns.remove('outcome')
+    common_columns = coulmns
+    eicu_label = eicu['outcome']
+    mimic3_label = mimic3['outcome']
+    mimic4_label = mimic4['outcome']
+    eicu_data = eicu[common_columns]
+    mimic3_data = mimic3[common_columns]
+    mimic4_data = mimic4[common_columns]
+    combine_data = eicu_data.append(mimic3_data, ignore_index=True).append(mimic4_data)
+    combine_label = pd.Series(concat_array([eicu_label, mimic3_label, mimic4_label]))
     processer = Processing()
-    merge, labels = data_merge(eicu, mimic3, mimic4, common_columns)
+    datas = [eicu_data, eicu_label, mimic3_data, mimic3_label, mimic4_data, mimic4_label, combine_data, combine_label]
+    dataset_names = ['eICU', 'MIMIC III', 'MIMIC IV', 'ARDset']
     for outcome, label in outcome_dict.items():
-        new_labels = format_label(labels, label)
-        x_train, x_test, y_train, y_test = train_test_split(merge, new_labels, test_size=0.2, shuffle=True)
-        various_model(x_train, x_test, y_train, y_test)
+        new_labels = format_label(eicu_label, label)
+        x_train, x_test, y_train, y_test = train_test_split(np.array(eicu_data), np.array(new_labels), test_size=0.2,
+                                                            shuffle=True)
+        various_model(x_train, x_test, y_train, y_test, 'eICU')
+        # for i, dataset_name in zip(range(4), dataset_names):
+        #     data = datas[2 * i]
+        #     labels = datas[2 * i + 1]
+        #     new_labels = format_label(labels, label)
+        #     x_train, x_test, y_train, y_test = train_test_split(np.array(data), np.array(new_labels), test_size=0.2,
+        #                                                         shuffle=True)
+        #     various_model(x_train, x_test, y_train, y_test, dataset_name)
