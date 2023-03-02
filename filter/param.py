@@ -148,8 +148,8 @@ xiu_header = ['id'] + drug_list + diagnosis_abbrevation_list + person_info_list 
                                                                                                ['median', 'std',
                                                                                                 'mean']) + extra_list
 outcome_dict = {
-    # 'Spontaneous Recovery': 0,
-    # 'Long Stay': 1,
+    'Spontaneous Recovery': 0,
+    'Long Stay': 1,
     'Rapid Death': 2
 }
 

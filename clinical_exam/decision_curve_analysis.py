@@ -13,9 +13,12 @@ from sklearn.calibration import calibration_curve
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix, roc_curve, auc
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
+from xgboost import XGBClassifier
 
+from dimension_reduction.xgboost_reduction import xgboost_selective, XGBoost_selective, catboost_selective
 from filter.common import standard_data_by_white
-from ml.classification.classify_parameter import XGBoost_none
+from filter.param import colors, marks
+from ml.classification.classify_parameter import XGBoost_none, base_models, searchCVnames_ab
 from sklearn.calibration import CalibrationDisplay
 
 
@@ -60,8 +63,8 @@ def plot_single_model_test_curve(model, data, label, name):
     plt.show()
 
 
-def plot_multiple_model_test_curves(models, data, label, names, colors, marks):
-    for model, name, color, mark in zip(models, names, colors, marks):
+def plot_multiple_model_test_curves(data, label):
+    for model, name, color, mark in zip(base_models, searchCVnames_ab, colors, marks):
         x_train, x_test, y_train, y_test = train_test_split(data, label, test_size=0.2, shuffle=True,
                                                             random_state=42)
         x_train, x_test = standard_data_by_white(x_train, x_test)
@@ -69,7 +72,7 @@ def plot_multiple_model_test_curves(models, data, label, names, colors, marks):
         if name == 'Perceptron':
             test_predict_proba = model._predict_proba_lr(x_test)
             fpr, tpr, threshold = metrics.roc_curve(y_test, test_predict_proba[:, 1], pos_label=1)
-        elif name == 'LinearRegression' or name == 'BayesianRidge':
+        elif name == 'LinR' or name == 'BR':
             test_predict_proba = model.predict(x_test)
             fpr, tpr, threshold = metrics.roc_curve(y_test, test_predict_proba, pos_label=1)
         else:
@@ -78,7 +81,6 @@ def plot_multiple_model_test_curves(models, data, label, names, colors, marks):
         auc = metrics.auc(fpr, tpr)
         plt.plot(fpr, tpr, color=color, label=r'%s test (area=%0.3f)' % (name, auc), lw=1, linestyle='--', marker=mark,
                  markersize=2)
-        # plt.plot([0, 1], [0, 1], linestyle='--', lw=3, color='gray', label='Luck', alpha=0.8) 对角线
     plt.xlim([-0.05, 1.05])
     plt.ylim([-0.05, 1.05])
     plt.xlabel('1 - specificity', fontweight='bold', fontsize=15)
@@ -165,7 +167,7 @@ def plot_DCA(ax, thresh_group, net_benefit_model, net_benefit_all):
 
 
 # 使用aps数据，查找出各结果的最相关特征
-def univariate_analysis(data, label, columns, model, param, name):
+def univariate_analysis(data, label, columns, param):
     x_train, x_test, y_train, y_test = train_test_split(np.array(data), np.array(label), test_size=0.2, shuffle=True,
                                                         random_state=42)
     x_train, x_test = standard_data_by_white(x_train, x_test)
@@ -181,15 +183,7 @@ def univariate_analysis(data, label, columns, model, param, name):
     # 分别绘制单变量分析结果图
     plot_univariate_analysis(vars, coefs, 'clinical_test')
     # 计算模型在全部数据上的auc
-    gclf = RandomizedSearchCV(model, param, scoring='roc_auc', n_jobs=10, cv=5)
-    # 输入数据为已归一化后数据 无须归一化
-    # gclf.fit(x_train, y_train)
-    # best_estimator = gclf.best_estimator_
-    # y_pred = best_estimator.predict_proba(x_test)
-    # fpr, tpr, threshold = roc_curve(np.array(y_test), y_pred[:, 1], pos_label=1)
-    # test_auc = auc(fpr, tpr)
-    # plt.plot(fpr, tpr, label=r'%s (area=%0.3f)' % (name, test_auc), color='r')
-    # 选取最重要的特征对应的数据
+    gclf = RandomizedSearchCV(XGBClassifier(), param, scoring='roc_auc', n_jobs=10, cv=5)
     data_new = DataFrame()
     for column in vars:
         data_new = pd.concat([data_new, data[column]], axis=1)
@@ -199,11 +193,8 @@ def univariate_analysis(data, label, columns, model, param, name):
     # 输入数据为已归一化后数据 无须归一化
     gclf.fit(x_train, y_train)
     best_estimator = gclf.best_estimator_
-    # y_pred = best_estimator.predict_proba(x_train)
-    # fpr, tpr, threshold = roc_curve(y_train, y_pred[:, 1], pos_label=1)
-    # test_auc = auc(fpr, tpr)
-    # plt.plot(fpr, tpr, label=r'top 15 train (area=%0.3f)' % test_auc, color='g')
     y_pred = best_estimator.predict_proba(x_test)
+    print(y_pred)
     fpr, tpr, threshold = roc_curve(y_test, y_pred[:, 1], pos_label=1)
     test_auc = auc(fpr, tpr)
     plt.plot(fpr, tpr, label=r'top 15 test (area=%0.3f)' % test_auc, color='b')
@@ -247,10 +238,21 @@ def plot_univariate_analysis(vars, coefs, name):
     plt.show()
 
 
+def xlsx_to_csv(xlsx_data):
+    data_xls = pd.read_excel(xlsx_data)
+    data_xls.to_csv('data_csx.csv', float_format='%.2f', encoding='utf-8')
+
+
 if __name__ == '__main__':
-    origin = pd.read_csv('test_1.csv')
-    label = origin.iloc[:, 0]
-    data = origin.iloc[:, 1:]
-    univariate_analysis(data, label, origin.columns[1:], XGBoost_none, {}, 'XGBoost')
+    origin = pd.read_csv('data_csx.csv')
+    columns = origin.columns[2:]
+    origin['术前支架植入'] = origin['术前支架植入'].astype('int')
+    label = origin.iloc[:, 1]
+    data = origin.iloc[:, 2:]
+    # univariate_analysis(data, label, origin.columns[1:], XGBoost_none, {}, 'XGBoost')
     # plot_decision_curve_analysis_on_test_set(XGBoost_none, data, label, 'XGBoost')
-    # plot_single_model_test_curve(XGBoost_none,np.array(data),np.array(label),'XGBoost')
+    # plot_single_model_test_curve(XGBoost_none, np.array(data), np.array(label), 'XGBoost')
+    # plot_multiple_model_test_curves(data, label)
+    xgboost_selective(data, label, columns)
+    XGBoost_selective(data, label, columns)
+    catboost_selective(data, label, columns)

@@ -8,14 +8,16 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from numpy import interp
-from pandas import DataFrame
 from sklearn.metrics import auc, roc_curve
 import os
 
 from sklearn.model_selection import train_test_split
 
-from filter.common import read_file, format_label, data_merge, standard_data_by_white, concat_array
+from filter.common import read_file, format_label, standard_data_by_white, concat_array
 from filter.param import outcome_dict, colors
+from pylab import mpl
+
+from ml.classification.classify_parameter import searchCVnames_ab, GBDT_none
 
 base_picture_path = './ARDS/combine/pictures/'
 base_csv_path = './ARDS/combine/csvfiles'
@@ -25,11 +27,19 @@ from ARDS.data_process.process import Processing
 
 # 在多个机器学习模型上融合训练数据，在统一测试集上查看模型性能
 # 使用不同模型测试融合数据性能
-def various_model(x_train, x_test, y_train, y_test, dataset_name):
-    from ml.classification.classify_parameter import base_models, searchCVnames
+def various_model(x_train, x_test, y_train, y_test, dataset_name, outcome):
+    plt.figure(figsize=(1.92, 2.12), dpi=150)
+    from ml.classification.classify_parameter import base_models
+    mpl.rcParams['font.family'] = 'sans-serif'
+    mpl.rcParams['font.sans-serif'] = ['SimSun']
     # 将训练集和测试集白化
     x_train, x_test = standard_data_by_white(x_train, x_test)
-    for name, model, color in zip(searchCVnames, base_models, colors[:len(base_models)]):
+    anglish_chinese_dict = {
+        'Spontaneous Recovery': '自发恢复',
+        'Long Stay': '长期住院',
+        'Rapid Death': '快速死亡'
+    }
+    for name, model, color in zip(searchCVnames_ab, base_models, colors[:len(base_models)]):
         i = 0
         mean_tpr = []
         mean_fpr = np.linspace(0, 1, 1000)
@@ -39,7 +49,8 @@ def various_model(x_train, x_test, y_train, y_test, dataset_name):
             if name == 'Perceptron':
                 test_predict_proba = model._predict_proba_lr(x_test)
                 fpr, tpr, threshold = roc_curve(y_test, test_predict_proba[:, 1], pos_label=1)
-            elif name == 'Linear Regression' or name == 'Bayesian Ridge':
+            # elif name == 'Linear Regression' or name == 'Bayesian Ridge':
+            elif name == 'LinR' or name == 'BR':
                 test_predict_proba = model.predict(x_test)
                 fpr, tpr, threshold = roc_curve(y_test, test_predict_proba, pos_label=1)
             else:
@@ -49,17 +60,65 @@ def various_model(x_train, x_test, y_train, y_test, dataset_name):
             mean_tpr = np.mean(tprs, axis=0)
             i += 1
         mean_auc = auc(mean_fpr, mean_tpr)
-        plt.plot(mean_fpr[:-1:30], mean_tpr[:-1:30], label=r'%s (area=%.3f)' % (name, mean_auc), color=color,
-                 marker='o', markersize=2, lw=1.5)
-    plt.title(r'%s(%s)' % (outcome, dataset_name), fontweight='bold', fontsize=20)
-    plt.xlabel('False positive rate', fontsize=15, fontweight='bold')
-    plt.ylabel('True positive rate', fontsize=15, fontweight='bold')
-    plt.xlim([-0.05, 1.05])
-    plt.ylim([-0.05, 1.05])
+        plt.plot(mean_fpr[:-1:30], mean_tpr[:-1:30], label=r'%s(area=%.2f)' % (name, mean_auc), color=color,
+                 marker='o', markersize=0.6, lw=0.5)
+    # plt.title(r'%s' % anglish_chinese_dict[outcome], fontweight='bold', fontsize=9)
+    # plt.xlabel('False positive rate', fontsize=6, fontweight='bold', fontproperties='Times New Roman')
+    # plt.ylabel('True positive rate', fontsize=6, fontweight='bold', fontproperties='Times New Roman')
+    plt.xlabel('假阳率', fontsize=9, fontweight='bold')
+    plt.ylabel('真阳率', fontsize=9, fontweight='bold')
+    plt.yticks(np.arange(0, 1.05, 0.2), fontsize=7, fontproperties='Times New Roman')
+    plt.xticks(np.arange(0, 1.05, 0.2), fontsize=7, fontproperties='Times New Roman')
     plt.grid()
-    plt.gca()
-    plt.legend(loc=4, fontsize=7)
-    plt.savefig(base_picture_path + '%s_%s.svg' % (outcome, dataset_name), format='svg')
+    # plt.legend(loc=4, fontsize=2.5)
+    labelss = plt.legend(loc=4, fontsize=4).get_texts()
+    [label.set_fontname('Times New Roman') for label in labelss]
+    plt.savefig(base_picture_path + '%s_%s_chinese_no_title.svg' % (outcome, dataset_name), bbox_inches='tight',
+                format='svg')
+    plt.show()
+
+
+def various_outcome(datas, labels, model, name):
+    plt.figure(figsize=(1.92, 2.12), dpi=150)
+    mpl.rcParams['font.family'] = 'sans-serif'
+    mpl.rcParams['font.sans-serif'] = ['SimSun']
+    # 将训练集和测试集白化
+    anglish_chinese_dict = {
+        'Spontaneous Recovery': '自发恢复',
+        'Long Stay': '长期住院',
+        'Rapid Death': '快速死亡'
+    }
+    colors = ['#8ECFC9', '#FFBE7A', '#FA7F6F', '#82B0D2']
+    for outcome, label, data, color in zip(outcome_dict.keys(), outcome_dict.values(), datas, colors):
+        new_labels = format_label(labels, label)
+        x_train, x_test, y_train, y_test = train_test_split(np.array(combine_data), np.array(new_labels), test_size=0.2,
+                                                            shuffle=True)
+        x_train, x_test = standard_data_by_white(x_train, x_test)
+        model.fit(x_train, y_train)
+        if name == 'Perceptron':
+            test_predict_proba = model._predict_proba_lr(x_test)
+            fpr, tpr, threshold = roc_curve(y_test, test_predict_proba[:, 1], pos_label=1)
+        # elif name == 'Linear Regression' or name == 'Bayesian Ridge':
+        elif name == 'LinR' or name == 'BR':
+            test_predict_proba = model.predict(x_test)
+            fpr, tpr, threshold = roc_curve(y_test, test_predict_proba, pos_label=1)
+        else:
+            test_predict_proba = model.predict_proba(x_test)
+            fpr, tpr, threshold = roc_curve(y_test, test_predict_proba[:, 1], pos_label=1)
+        mean_auc = auc(fpr, tpr)
+        plt.plot(fpr[:-1:30], tpr[:-1:30], label=r'%s(area=%.2f)' % (anglish_chinese_dict[outcome], mean_auc),
+                 color=color, marker='o', markersize=0.6, lw=0.5)
+    plt.xlabel('假阳率', fontsize=9, fontweight='bold')
+    plt.ylabel('真阳率', fontsize=9, fontweight='bold')
+    plt.yticks(np.arange(0, 1.05, 0.2), fontsize=7, fontproperties='Times New Roman')
+    plt.xticks(np.arange(0, 1.05, 0.2), fontsize=7, fontproperties='Times New Roman')
+    plt.grid()
+    plt.legend(loc=4, fontsize=6)
+    # plt.legend(loc=4, fontsize=2.5)
+    # labelss = plt.legend(loc=4, fontsize=4).get_texts()
+    # [label.set_fontname('Times New Roman') for label in labelss]
+    plt.savefig(base_picture_path + '%s_chinese_no_title.svg' % name, bbox_inches='tight',
+                format='svg')
     plt.show()
 
 
@@ -85,15 +144,16 @@ if __name__ == '__main__':
     processer = Processing()
     datas = [eicu_data, eicu_label, mimic3_data, mimic3_label, mimic4_data, mimic4_label, combine_data, combine_label]
     dataset_names = ['eICU', 'MIMIC III', 'MIMIC IV', 'ARDset']
-    for outcome, label in outcome_dict.items():
-        new_labels = format_label(eicu_label, label)
-        x_train, x_test, y_train, y_test = train_test_split(np.array(eicu_data), np.array(new_labels), test_size=0.2,
-                                                            shuffle=True)
-        various_model(x_train, x_test, y_train, y_test, 'eICU')
-        # for i, dataset_name in zip(range(4), dataset_names):
-        #     data = datas[2 * i]
-        #     labels = datas[2 * i + 1]
-        #     new_labels = format_label(labels, label)
-        #     x_train, x_test, y_train, y_test = train_test_split(np.array(data), np.array(new_labels), test_size=0.2,
-        #                                                         shuffle=True)
-        #     various_model(x_train, x_test, y_train, y_test, dataset_name)
+    various_outcome(combine_data, combine_label, GBDT_none, 'GBDT')
+    # for outcome, label, data in zip(outcome_dict.keys(), outcome_dict.values(), datas):
+    #     new_labels = format_label(combine_label, label)
+    #     x_train, x_test, y_train, y_test = train_test_split(np.array(combine_data), np.array(new_labels), test_size=0.2,
+    #                                                         shuffle=True)
+    #     various_model(x_train, x_test, y_train, y_test, 'ARDset', outcome)
+    # for i, dataset_name in zip(range(4), dataset_names):
+    #     data = datas[2 * i]
+    #     labels = datas[2 * i + 1]
+    #     new_labels = format_label(labels, label)
+    #     x_train, x_test, y_train, y_test = train_test_split(np.array(data), np.array(new_labels), test_size=0.2,
+    #                                                         shuffle=True)
+    #     various_model(x_train, x_test, y_train, y_test, dataset_name)

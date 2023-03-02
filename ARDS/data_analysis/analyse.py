@@ -1,6 +1,7 @@
 import csv
 import os
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -13,6 +14,7 @@ import filter.param
 from filter.common import read_file, concat_array
 from filter.param import *
 from matplotlib import ticker
+from pylab import mpl
 
 global dataset_names
 dataset_names = ['eICU', 'MIMIC III', 'MIMIC IV', 'ARDset']
@@ -168,8 +170,7 @@ class analysis_plot:
         fig, ax = plt.subplots(dpi=500, figsize=(7, 10))
         max_index = min(15, len(names_new))
         b = ax.barh(range(len(names_new[:max_index])), dis_rate_new[:max_index][::-1], xerr=xerr,
-                    tick_label=names_new[:max_index][::-1],
-                    error_kw=error_kw, color='gray', zorder=1)
+                    tick_label=names_new[:max_index][::-1], error_kw=error_kw, color='gray', zorder=1)
         for i, rect in enumerate(b):
             w = rect.get_width()
             if i > 12:
@@ -413,7 +414,7 @@ class analysis_plot:
             self.name = name
         # self.plot_stacked_histogram(data)
         # self.patient_consist(data)
-        # self.plot_hospital_stay(data)
+        self.plot_hospital_stay(data)
         # self.admission_source_word_cloud_plot(data)
         self.admission_source_plot(data, vertical=True)
         # severity = data['severity']
@@ -465,10 +466,10 @@ class analysis_plot:
         plt.show()
 
     def admission_source_plot(self, data, vertical=False):
-        fig, ax = plt.subplots(figsize=(8, 6))
+        fig, ax = plt.subplots(figsize=(1.97, 3.94), dpi=150)
         ax.grid(zorder=0)
-        from pylab import mpl
-        # mpl.rcParams['font.sans-serif'] = ['SimHei']
+        mpl.rcParams['font.family'] = 'sans-serif'
+        mpl.rcParams['font.sans-serif'] = ['SimSun']
 
         def trans_admission_word_count(sub_data, selected=False, n=0):
             chinese_word_dict = {}
@@ -498,24 +499,30 @@ class analysis_plot:
             return chinese_word_dict, english_word_dict
 
         rates = [-1.5, -0.5, 0.5, 1.5]
-
-        colors = ['red', 'blue', 'green', 'purple']
-        # mpl.rcParams['font.sans-serif'] = ['SimHei']
+        colors = ['blue', 'orange', 'green', 'red']
+        colors = ['#D4535B', '#3BC1D9', '#AB9BCE', '#8DC2A8']
+        colors = ['#8ECFC9', '#FFBE7A', '#FA7F6F', '#82B0D2']
+        offsets = [0, 0.02, 0.06, 0]
         if vertical:
             height = 0.2
-            for sub_data, name, rate, color in zip(data, dataset_names, rates, colors):
+            for sub_data, name, rate, color, offset in zip(data, dataset_names, rates, colors, offsets):
                 sub_admission = sub_data[diagnosis_abbrevation_list]
                 chinese, english = trans_admission_word_count(sub_admission, True, 5)
                 y = np.arange(5, 0, -1) + rate * height
-                mpl.rcParams['font.sans-serif'] = ['Time New Roman']
-                plt.barh(y, list(english.values()), height=height, label=name, color=color, zorder=5)
-                for a, b, label in zip(y, list(english.values()), english.keys()):
-                    plt.text(b, a, label, verticalalignment='center', zorder=6)
+                # mpl.rcParams['font.sans-serif'] = ['Time New Roman']
+                plt.barh(y, list(chinese.values()), height=height, label=name, color=color, zorder=5)
+                for i, a, b, label in zip(range(len(y)), y, list(chinese.values()), chinese.keys()):
+                    plt.text(b / 2, a, label, verticalalignment='center', zorder=6, fontsize=9)
             ax.xaxis.set_major_formatter(ticker.PercentFormatter(xmax=1))
-            plt.xlabel('Percentage of Admission Diagnosis', fontweight='bold', fontsize=15,
-                       fontproperties='Times New Roman')
-            plt.ylabel('Admission Diagnosis', fontweight='bold', fontsize=15, fontproperties='Times New Roman')
-            plt.xticks(np.arange(0, 0.85, 0.2))
+            # plt.xlabel('Percentage', fontweight='bold', fontsize=12, fontproperties='Times New Roman')
+            # plt.ylabel('Admission Diagnosis', fontweight='bold', fontsize=12, fontproperties='Times New Roman')
+            plt.xlabel('占比', fontweight='bold', fontsize=9)
+            plt.ylabel('前五项入院诊断', fontweight='bold', fontsize=9, rotation=270, labelpad=10)
+            plt.xticks(np.arange(0, 0.65, 0.2), fontsize=8, fontproperties='Times New Roman')
+            plt.legend(bbox_to_anchor=(0.5, -0.15), loc=8, ncol=10, frameon=False)
+            # plt.yticks(np.arange(0, 6, 1), fontsize=8, fontproperties='Times New Roman')
+            plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
+            plt.yticks([])
         else:
             width = 0.2
             for sub_data, name, rate, color in zip(data, dataset_names, rates, colors):
@@ -529,11 +536,81 @@ class analysis_plot:
                     # plt.text(a, b, label, rotation=30, wrap=False)
                     plt.text(a, b, label, rotation=-90, wrap=True, verticalalignment='center', zorder=6)
             ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=1))
-            plt.ylabel('Percentage of Admission Diagnosis', fontweight='bold', fontsize=15)
-            plt.xlabel('Admission Diagnosis', fontweight='bold', fontsize=15)
-        plt.title('Top 5 Admission Diagnosis for Each Dataset', fontweight='bold', fontsize=15)
-        plt.legend(labels=dataset_names, loc=4)
-        plt.savefig('admission.svg', format='svg')
+            plt.ylabel('Percentage of Admission Diagnosis', fontweight='bold', fontsize=12)
+            plt.xlabel('Admission Diagnosis', fontweight='bold', fontsize=12)
+        # plt.title('入院诊断前五项', fontweight='bold', fontsize=12)
+        labelss = plt.legend(labels=dataset_names, loc=4, fontsize=6).get_texts()
+        [label.set_fontname('Times New Roman') for label in labelss]
+        plt.savefig('admission_chinese.svg', bbox_inches='tight', format='svg', pad_inches=0.1)
+        plt.show()
+
+    def plot_hospital_stay(self, data):
+        # 红色：  #D4535B
+        # 蓝色：  #3BC1D9
+        # 紫色：  #AB9BCE
+        # 绿色：  #8DC2A8
+        mpl.rcParams['font.family'] = 'sans-serif'
+        mpl.rcParams['font.sans-serif'] = ['SimSun']
+        dataset_names = ['eICU', 'MIMIC III', 'MIMIC IV', 'ARDset']
+        stay_type = ['Hospital stay', 'ICU stay']
+        colors = ['blue', 'orange', 'green', 'red']
+        colors = ['#D4535B', '#3BC1D9', '#AB9BCE', '#8DC2A8']
+        colors = ['#C01E35', '#00A8C9', '#886FB8', '#3A936A']
+        colors = ['#8ECFC9', '#FFBE7A', '#FA7F6F', '#82B0D2']
+        sns.set_context('paper', rc={'lines.linewidth': 1})
+        # fig, axes = plt.subplots(ncols=2, nrows=1, figsize=(3.35, 1.97), dpi=150)
+        plt.subplots(figsize=(1.97, 3.94), dpi=150)
+        plt.subplot(211)
+        for i, color, name in zip(range(len(data)), colors, dataset_names):
+            hospital_data = data[i][['hospital']]
+            # hospital_data.plot(kind='kde', label=name)
+            sns.distplot(hospital_data, vertical=True, hist=False, kde=False, fit=stats.norm,
+                         fit_kws={'color': color, 'linestyle': '-'},
+                         kde_kws={'label': name + '_' + stay_type[0], 'linestyle': '-'})
+        # plt.ylabel('Days', fontsize=12, fontweight='bold')
+        # plt.xlabel('Density', fontsize=12, fontweight='bold')
+        plt.ylabel('天数', fontsize=9, fontweight='bold', y=0)
+        # plt.xlabel('密度', fontsize=12, fontweight='bold')
+        # ax1.set_ylabel('天数', fontsize=12, fontweight='bold')
+        # ax1.set_xlabel('密度', fontsize=12, fontweight='bold')
+        plt.xticks(np.arange(0, 0.062, 0.02), fontsize=8, fontproperties='Times New Roman')
+        plt.yticks(np.arange(0, 62, 20), fontsize=8, fontproperties='Times New Roman')
+        # ax1.set_xticks(np.arange(0, 0.062, 0.02), fontsize=7, fontproperties='Times New Roman')
+        # ax1.set_yticks(np.arange(0, 62, 20), fontsize=7, fontproperties='Times New Roman')
+        plt.xlim([0, 0.062])
+        # ax1.set_xlim([0, 0.062])
+        plt.ylim([0, 62])
+        plt.grid()
+        # matplotlib.rcParams.update({'font.size': 6})
+        # plt.legend(labels=dataset_names, title='Hospital Stay', fontsize=6)
+        plt.legend(labels=dataset_names, title='医院住院', fontsize=9)
+        # ax1.legend(labels=dataset_names, title='医院住院', fontsize=7)
+        labelss = plt.legend(labels=dataset_names, title='医院住院', fontsize=9, frameon=False).get_texts()
+        [label.set_fontname('Times New Roman') for label in labelss]
+        plt.subplot(212)
+        for i, color, name in zip(range(len(data)), colors, dataset_names):
+            unit_data = data[i][['unit']]
+            # unit_data.plot(kind='kde', label=name)
+            sns.distplot(unit_data, vertical=True, hist=False, kde=False, fit=stats.norm,
+                         kde_kws={'label': name + '_' + stay_type[1]},
+                         fit_kws={'color': color, 'linestyle': 'dashed'})
+        # plt.xlabel('Density', fontsize=12, fontweight='bold')
+        plt.xticks(np.arange(0, 0.062, 0.02), fontsize=8, fontproperties='Times New Roman')
+        # plt.yticks(np.arange(0, 62, 20), fontsize=8, fontproperties='Times New Roman')
+        # ax2.set_xlabel('密度', fontsize=12, fontweight='bold')\
+        plt.xlabel('密度', fontsize=9, fontweight='bold')
+        # ax2.set_xticks(np.arange(0, 0.062, 0.02), fontsize=8, fontproperties='Times New Roman')
+        # ax2.set_yticks(np.arange(0, 62, 20), fontsize=7, fontproperties='Times New Roman')
+        plt.xlim([0, 0.062])
+        # ax2.set_xlim([0, 0.062])
+        plt.ylim([0, 62])
+        # plt.legend(labels=dataset_names, title='ICU Stay', fontsize=6)
+        # plt.legend(labels=dataset_names, title='重症监护室住院', fontsize=7)
+        labelss = plt.legend(labels=dataset_names, title='重症监护室住院', fontsize=9, frameon=False).get_texts()
+        [label.set_fontname('Times New Roman') for label in labelss]
+        plt.grid()
+        plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
+        plt.savefig('hospital_stay_chinese.svg', bbox_inches='tight', format='svg')
         plt.show()
 
     # plot stacked histogram for each datasets and group them up into a union
@@ -549,16 +626,9 @@ class analysis_plot:
             @param stack_names: item names, such as eICU,MIMIC III, MIMIC IV and ARDset.
             @param stack_label: age group name
             """
-            fig, ax = plt.subplots(figsize=(8, 6))
+            fig, ax = plt.subplots(figsize=(3.35, 1.97), dpi=150)
             ax.grid(zorder=0)
-            # color_base = np.array([128, 4, 128])
-            red = 125
-            origin_green = 200
-            blue = 255
-            colors = ['coral', 'sandybrown', 'gold', 'orange']
             colors = ['gold', 'sandybrown', 'orange', 'darkorange', 'red']
-            # colors.reverse()
-            # colors = ['brown', 'gray', 'olive', 'pink']
             for i, color in zip(range(len(stacks)), colors):
                 if i > 0:
                     bottom = []
@@ -566,18 +636,13 @@ class analysis_plot:
                         bottom.append(sum(stacks[:i, k]))
                 else:
                     bottom = [0] * len(stacks[i])
-                green = origin_green - 60 * i
-                # ax.bar(stack_names, stacks[i], width=0.45, bottom=bottom, label=stack_label[i],
-                #        color=np.array([red, green, blue]) / 255)
-                ax.bar(stack_names, stacks[i], width=0.45, bottom=bottom, label=stack_label[i],
-                       color=color, zorder=3)
+                ax.bar(stack_names, stacks[i], width=0.3, bottom=bottom, label=stack_label[i], color=color, zorder=3)
                 for i, num, height in zip(range(len(stacks[i])), stacks[i], bottom):
                     if num > 0:
-                        ax.text(i, height + num / 2, '%.0f' % num, ha='center', va='top', zorder=3, fontsize=15)
-            ax.set_ylabel('Percentage of ARDS Patients', fontweight='bold', fontsize=20,
-                          fontproperties='Times New Roman')
+                        ax.text(i, height + num / 2, '%.0f' % num, ha='center', va='top', zorder=3)
+            ax.set_ylabel('Percentage', fontweight='bold', fontsize=12, fontproperties='Times New Roman')
             ax.set_title('Age Distribution in ARDS Datasets', fontweight='bold', fontproperties='Times New Roman',
-                         fontsize=20)
+                         fontsize=12)
             # ax.set_xlabel('Datasets', fontweight='bold', fontsize=20, fontproperties='Times New Roman')
             # 坐标轴显示百分比，若实际数值为小于1的小数，xmax设置为1，即xmax=1
             ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=100, decimals=1))
@@ -586,8 +651,7 @@ class analysis_plot:
             box = ax.get_position()
             ax.set_position([box.x0, box.y0, box.width * 0.9, box.height])
             ax.legend(loc='center left', bbox_to_anchor=(1, 0.6))
-            plt.savefig('age_distribution.emf', format='emf')
-            # self.save_pic('age_distribution')
+            plt.savefig('age_distribution.svg', bbox_inches='tight', format='svg')
             plt.show()
 
         def compute_patient_rate_in_each_gap(data):
@@ -619,6 +683,7 @@ class analysis_plot:
         x_labels = ['eICU', 'MIMIC III', 'MIMIC IV', 'ARDset']
         group_18, group_33, group_48, group_63, group_78 = compute_patient_rate_in_each_gap(data)
         stacks = np.array([group_18, group_33, group_48, group_63, group_78])
+        print(stacks)
         plot_each_stacked(stacks, x_labels,
                           ['18-33 years', '33-48 years', '48-63 years', '63-78 years', '>=78  years'])
 
@@ -629,57 +694,68 @@ class analysis_plot:
             explode = (0, 0.1)
             ax1 = fig.add_subplot(ax1_num)
             ax2 = fig.add_subplot(ax2_num)
-            # fig.subplots_adjust(wspace=0)
             fig.subplots_adjust(left=0.08, bottom=0.0, right=0.96, top=0.99, wspace=0.01, hspace=0.05)
             # 大饼图的制作
-            ax1.pie(one_data, autopct='%1.1f%%', startangle=60, radius=1.2, explode=explode,
-                    labels=one_classes, colors=['lightgreen', 'lightcoral'], pctdistance=0.45,
-                    textprops={'fontsize': 20, 'color': 'black'}, labeldistance=0.75)
-            # l_text是饼图对着文字大小，p_text是饼图内文字大小
-            # for l, p in zip(l_text, p_text):
-            #     l.set_size(30)
-            #     p.set_size(20)
+            patches, l_text, p_text = ax1.pie(one_data, autopct='%1.1f%%', startangle=60, radius=1.2, explode=explode,
+                                              labels=one_classes, colors=['green', 'red'], pctdistance=0.45,
+                                              textprops={'fontsize': 8, 'color': 'black'}, labeldistance=0.75)
+            # l_text是饼图外文字大小，p_text是饼图内文字大小
+            for l, p in zip(l_text, p_text):
+                l.set_size(8)
+                p.set_size(8)
 
             # 小饼图的制作
             width = 0.8
             patches, l_text, p_text = ax2.pie(two_data, autopct='%1.1f%%', startangle=90, labels=two_classes,
                                               labeldistance=1.3, radius=0.5, shadow=True,
-                                              colors=['brown', 'tomato', 'coral'])
+                                              colors=['orange', 'sandybrown', 'gold'])
             for l, p in zip(l_text, p_text):
-                l.set_size(18)
-                p.set_size(15)
+                l.set_size(8)
+                p.set_size(8)
 
             # 使用ConnectionPatch画出两个饼图的间连线
             # 先得到饼图边缘的数据
             theta1, theta2 = ax1.patches[len(one_classes) - 1].theta1, ax1.patches[len(one_classes) - 1].theta2
             center, r = ax1.patches[len(one_classes) - 1].center, ax1.patches[len(one_classes) - 1].r
 
+            # # 画出上边缘的连线
+            # x = r * np.cos(np.pi / 180 * theta2) + center[0]
+            # y = np.sin(np.pi / 180 * theta2) + center[1]
+            # con = ConnectionPatch(xyA=(-width / 2, 0.5), xyB=(x, y), coordsA='data', coordsB='data', axesA=ax2,
+            #                       axesB=ax1)
+            # con.set_linewidth(1)
+            # con.set_color = ([0, 0, 0])
+            # ax2.add_artist(con)
+            #
+            # # 画出下边缘的连线
+            # x = r * np.cos(np.pi / 180 * theta1) + center[0]
+            # y = np.sin(np.pi / 180 * theta1) + center[1]
+            # con = ConnectionPatch(xyA=(-width / 2, -0.5), xyB=(x, y), coordsA='data', coordsB='data', axesA=ax2,
+            #                       axesB=ax1)
+            # con.set_linewidth(1)
+            # con.set_color = ([0, 0, 0])
+            # ax2.add_artist(con)
+
             # 画出上边缘的连线
-            x = r * np.cos(np.pi / 180 * theta2) + center[0]
-            y = np.sin(np.pi / 180 * theta2) + center[1]
+            mean_theta = (theta1 + theta2) / 2
+            x = r * np.cos(np.pi / 180 * mean_theta) + center[0]
+            y = np.sin(np.pi / 180 * mean_theta) + center[1]
             con = ConnectionPatch(xyA=(-width / 2, 0.5), xyB=(x, y), coordsA='data', coordsB='data', axesA=ax2,
                                   axesB=ax1)
-            con.set_linewidth(1)
-            con.set_color = ([0, 0, 0])
-            ax2.add_artist(con)
-
-            # 画出下边缘的连线
-            x = r * np.cos(np.pi / 180 * theta1) + center[0]
-            y = np.sin(np.pi / 180 * theta1) + center[1]
-            con = ConnectionPatch(xyA=(-width / 2, -0.5), xyB=(x, y), coordsA='data', coordsB='data', axesA=ax2,
-                                  axesB=ax1)
-            con.set_linewidth(1)
+            con.set_linewidth(0.5)
             con.set_color = ([0, 0, 0])
             ax2.add_artist(con)
 
         plt.rcParams['font.sans-serif'] = ['Times New Roman']
-        fig = plt.figure(figsize=(12, 7.5))
+        fig = plt.figure(figsize=(3.35, 1.97), dpi=150)
         plt_num = [241, 242, 243, 244, 245, 246, 247, 248]
         dataset_names = ['eICU', 'MIMIC III', 'MIMIC IV', 'ARDset']
         for i, name in zip(range(len(data)), dataset_names):
             sub_data = data[i]
             one_classes = ['alive', 'expired']
             patients = len(np.array(sub_data))
+            alive = len([item for item in sub_data['detail'] if item == 3])
+            death = patients - alive
             two_classes = ['severe', 'moderate', 'mild']
             alive_rate = 100 * len([item for item in sub_data['detail'] if item == 3]) / patients
             one_data = [round(alive_rate, 1), round(100 - alive_rate, 1)]
@@ -688,52 +764,10 @@ class analysis_plot:
             expired_moderates = len([out for out, ser in patient_detail if out != 3 and ser == 2])
             expired_milds = len([out for out, ser in patient_detail if out != 3 and ser == 3])
             two_data = [expired_severes, expired_moderates, expired_milds]
+            print('%s one: %s two: %s' % (name, [alive, death], two_data))
             plot_pie_graph(fig, plt_num[2 * i], plt_num[2 * i + 1], one_classes, one_data, two_classes, two_data)
-            plt.title(name, fontweight='bold', fontsize=30, loc='left')
-        # 不显示坐标刻度
-        # plt.xaxis.set_visible(False)
-        # plt.yaxis.set_visible(False)
-        # plt.title('Patients Condition and the Severity of Expired Patients', fontproperties='Times New Roman',
-        #           fontsize=25, loc='left')
-        plt.savefig('patient_condition.svg', format='svg')
-        # self.save_pic('patient_condition')
-        plt.show()
-
-    def plot_hospital_stay(self, data):
-        plt.rcParams['font.sans-serif'] = ['Times New Roman']
-        dataset_names = ['eICU', 'MIMIC III', 'MIMIC IV', 'ARDset']
-        stay_type = ['Hospital stay', 'ICU stay']
-        colors = ['red', 'blue', 'green', 'purple']
-        fig = plt.figure()
-        plt.xticks([]), plt.yticks([])
-        fig.add_subplot(121)
-        for i, color, name in zip(range(len(data)), colors, dataset_names):
-            hospital_data = data[i][['hospital']]
-            sns.distplot(hospital_data, vertical=True, hist=False, kde=False, fit=stats.norm,
-                         fit_kws={'color': color, 'linestyle': '-'}, kde_kws={'label': name + '_' + stay_type[0]})
-        plt.ylabel('Days', fontsize=20, fontweight='bold')
-        plt.xlabel('Density', fontsize=20, fontweight='bold')
-        plt.xticks(np.arange(0, 0.062, 0.02))
-        plt.xlim([0, 0.062])
-        plt.yticks(np.arange(0, 62, 20))
-        plt.grid()
-        plt.ylim([0, 62])
-        plt.legend(labels=dataset_names, title='Hospital Stay')
-        fig.add_subplot(122)
-        for i, color, name in zip(range(len(data)), colors, dataset_names):
-            unit_data = data[i][['unit']]
-            sns.distplot(unit_data, vertical=True, hist=False, kde=False, fit=stats.norm,
-                         kde_kws={'label': name + '_' + stay_type[1]},
-                         fit_kws={'color': color, 'linestyle': 'dashed'})
-        plt.xlabel('Density', fontsize=20, fontweight='bold')
-        plt.xticks(np.arange(0, 0.062, 0.02))
-        plt.xlim([0, 0.062])
-        plt.yticks(np.arange(0, 62, 20))
-        plt.ylim([0, 62])
-        plt.legend(labels=dataset_names, title='ICU Stay')
-        plt.grid()
-        plt.savefig('hospital_stay.svg', format='svg')
-        # self.save_pic('hospital_stay')
+            plt.title(name, fontweight='bold', fontsize=12, loc='left')
+        plt.savefig('patient_condition.svg', bbox_inches='tight', format='svg')
         plt.show()
 
     def save_pic(self, name):
@@ -754,5 +788,4 @@ if __name__ == '__main__':
     data = [eicu, mimic3, mimic4, total]
     ages = [eicu['age'], mimic3['age'], mimic4['age'], total['age']]
     analyser = analysis_plot()
-    # analyser.plot_images(data=DataFrame(ages), name='total')
     analyser.plot_images(data=data)

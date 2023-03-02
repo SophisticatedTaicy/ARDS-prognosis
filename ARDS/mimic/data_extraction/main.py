@@ -116,6 +116,7 @@ class MIMIC_Acquisition:
 if __name__ == '__main__':
     mimic_a = MIMIC_Acquisition(type='4', mutilprocess=True, issave=True)
     mimic_a.get_ARDS_datas()
+
     # datas = read_file(filename='result', path=mimic_a.path)
     # processer = Processing()
     # processer.format_ards_data('3')

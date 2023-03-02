@@ -14,7 +14,7 @@ from filter.common import standard_data_by_white, data_split_and_combine, judge_
     concat_array
 from filter.param import *
 from ml.classification.classify_parameter import GBDT_param, GBDT
-
+from pylab import mpl
 from neural_class import read_file
 
 base_csv_path = os.path.abspath(os.path.join(os.getcwd(), '..', 'ARDS'))
@@ -85,13 +85,6 @@ class univariate_analysis:
                 # gclf = RandomizedSearchCV(XGB, XGB_param, scoring='roc_auc', n_jobs=10, cv=5)
                 gclf = RandomizedSearchCV(GBDT, GBDT_param, scoring='roc_auc', n_jobs=10, cv=5)
                 gclf = RandomizedSearchCV(GBDT, {}, scoring='roc_auc', n_jobs=10, cv=5)
-                # # 输入数据为已归一化后数据 无须归一化
-                # y_pred = best_estimator.predict_proba(np.array(x_test))
-                # fpr, tpr, threshold = roc_curve(np.array(y_test), y_pred[:, 1], pos_label=1)
-                # test_auc = auc(fpr, tpr)
-                # print('datatype : %s outcome : %s, all best params : %s, auc : %s' % (
-                #     self.datatype, outcome, gclf.best_params_, test_auc))
-                # plt.plot(fpr, tpr, label=r'%s (area=%f)' % (self.datatype, test_auc), color='r')
                 # # 选取最重要的特征对应的数据
                 x_train_new = DataFrame()
                 x_test_new = DataFrame()
@@ -140,6 +133,7 @@ class univariate_analysis:
         return test_auc
 
     def univate_test(self, x_train, x_test, y_train, y_test, datas, test_name):
+        plt.figure(figsize=(1.57, 2.12), dpi=150)
         analyser = univariate_analysis(common_columns)
         # 设置单变量分析的模型
         model = LogisticRegression()
@@ -154,6 +148,8 @@ class univariate_analysis:
         combine_aucs = []
         mimic3_aucs = []
         mimic4_aucs = []
+        mpl.rcParams['font.family'] = 'sans-serif'
+        mpl.rcParams['font.sans-serif'] = ['SimSun']
         # 计算相应auc，按照5的步长划分特征集个数
         for coef_num in dimensions:
             coefs = coef_lr.iloc[index_sort, :][-coef_num:]
@@ -168,20 +164,30 @@ class univariate_analysis:
                 analyser.select_specific_columns_and_compute_auc(datas[6], datas[7], x_test, y_test, vars))
             # print('coef_num : %s vars : %s' % (coef_num, vars))
         aucs = [eicu_aucs, mimic3_aucs, mimic4_aucs, combine_aucs]
-        fig, ax = plt.subplots(figsize=(10, 7.5))
+        # fig, ax = plt.subplots(figsize=(10, 7.5))
+        fig, ax = plt.subplots(figsize=(1.57, 1.8), dpi=150)
         colors = ['red', 'orange', 'yellowgreen', 'deepskyblue']
+        colors = ['#8ECFC9', '#FFBE7A', '#FA7F6F', '#82B0D2']
         for color, dataset_name, auc in zip(colors, dataset_names, aucs):
-            plt.plot(dimensions, auc, 'ro-', color=color, label=dataset_name)
-            plt.xlabel('Dimensions', fontweight='bold', fontsize=15, fontproperties='Times New Roman')
-            plt.ylabel('AUC', fontweight='bold', fontsize=15, fontproperties='Times New Roman')
-            plt.title('%s(test = %s)' % (outcome, test_name), fontweight='bold', fontsize=20,
-                      fontproperties='Times New Roman')
+            plt.plot(dimensions, auc, 'ro-', color=color, label=dataset_name, markersize=0.6, linewidth=0.5)
+            # plt.xlabel('Dimensions', fontweight='bold', fontsize=5, fontproperties='Times New Roman')
+            # plt.ylabel('AUC', fontweight='bold', fontsize=5, fontproperties='Times New Roman')
+            plt.xlabel('维度', fontweight='bold', fontsize=9)
+            plt.ylabel('AUC', fontweight='bold', fontsize=9, fontproperties='Times New Roman')
+            # plt.title('%s(test = %s)' % (outcome, test_name), fontweight='bold', fontsize=5.5,
+            #           fontproperties='Times New Roman')
         ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=1))
-        plt.yticks(np.arange(0.6, 1.05, 0.05))
-        plt.xticks(np.arange(5, 105, 10))
+        plt.yticks(np.arange(0.6, 1.02, 0.1), fontsize=6, fontproperties='Times New Roman')
+        plt.xticks(np.arange(5, 106, 20), fontsize=6, fontproperties='Times New Roman')
         plt.grid()
-        plt.legend(labels=dataset_names, loc=4)
-        plt.savefig('%s_test_%s.svg' % (outcome, test_name), format='svg')
+        plt.gca()
+        # plt.legend(labels=dataset_names, loc=4, fontsize=3.5)
+        labelss = plt.legend(labels=dataset_names, loc=2, fontsize=5.5, frameon=False, ncol=2,
+                             columnspacing=0.2).get_texts()
+        [label.set_fontname('Times New Roman') for label in labelss]
+        print('%s_test_%s_0.svg saved' % (outcome, test_name))
+        plt.savefig('%s_test_%s_chinese0.svg' % (outcome, test_name), bbox_inches='tight', format='svg')
+        plt.savefig('%s_test_%s_chinese.svg' % (outcome, test_name), format='svg')
         plt.show()
 
 
