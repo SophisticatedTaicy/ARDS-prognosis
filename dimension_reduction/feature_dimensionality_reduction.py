@@ -149,7 +149,6 @@ def shapBoruta(data, label, model):
         y_predict = model.predict_proba(y_test)
         fpr, tpr, threshold = roc_curve(y_test, y_predict[:, 1])
         auc = metrics.auc(fpr, tpr)
-        plt.plot()
 
 
 def boruta(data, label, model):

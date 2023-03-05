@@ -446,7 +446,6 @@ class analysis_plot:
                 final_txt_list = final_txt_list + (column_mark + ',') * mark_sum
             with open('pictures/' + dataset_name + '_diagnosis_chinese_word_cloud.txt', 'w') as f:
                 f.write(final_txt_list)
-
         fig = plt.figure()
         sub_plots = [221, 222, 223, 224]
         pic = imageio.imread('pictures/img.png')

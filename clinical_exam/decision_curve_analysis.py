@@ -9,17 +9,16 @@ import pandas as pd
 from matplotlib import pyplot as plt, pyplot
 from pandas import DataFrame
 from sklearn import metrics
-from sklearn.calibration import calibration_curve
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix, roc_curve, auc
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from xgboost import XGBClassifier
 
-from dimension_reduction.xgboost_reduction import xgboost_selective, XGBoost_selective, catboost_selective
 from filter.common import standard_data_by_white
 from filter.param import colors, marks
-from ml.classification.classify_parameter import XGBoost_none, base_models, searchCVnames_ab
-from sklearn.calibration import CalibrationDisplay
+from ml.classification.classify_parameter import  searchCVnames_ab_clinical, \
+    base_models_clical
+from pylab import mpl
 
 
 # 临床模型的决策曲线分析解读:
@@ -64,9 +63,9 @@ def plot_single_model_test_curve(model, data, label, name):
 
 
 def plot_multiple_model_test_curves(data, label):
-    for model, name, color, mark in zip(base_models, searchCVnames_ab, colors, marks):
-        x_train, x_test, y_train, y_test = train_test_split(data, label, test_size=0.2, shuffle=True,
-                                                            random_state=42)
+    for model, name, color, mark in zip(base_models_clical, searchCVnames_ab_clinical, colors, marks):
+        x_train, x_test, y_train, y_test = train_test_split(np.array(data), np.array(label), test_size=0.2,
+                                                            shuffle=True, random_state=42)
         x_train, x_test = standard_data_by_white(x_train, x_test)
         model.fit(x_train, y_train)
         if name == 'Perceptron':
@@ -79,16 +78,15 @@ def plot_multiple_model_test_curves(data, label):
             test_predict_proba = model.predict_proba(x_test)
             fpr, tpr, threshold = metrics.roc_curve(y_test, test_predict_proba[:, 1], pos_label=1)
         auc = metrics.auc(fpr, tpr)
-        plt.plot(fpr, tpr, color=color, label=r'%s test (area=%0.3f)' % (name, auc), lw=1, linestyle='--', marker=mark,
+        plt.plot(fpr, tpr, color=color, label=r'%s(area=%0.3f)' % (name, auc), lw=1, linestyle='--', marker=mark,
                  markersize=2)
     plt.xlim([-0.05, 1.05])
     plt.ylim([-0.05, 1.05])
-    plt.xlabel('1 - specificity', fontweight='bold', fontsize=15)
-    plt.ylabel('sensitivity', fontweight='bold', fontsize=15)
-    plt.title('test ROCs', fontsize=17)
-    plt.legend(loc='lower right', fontsize=7)
+    plt.xlabel('1 - specificity', fontweight='bold', fontsize=12, fontproperties='Times New Roman')
+    plt.ylabel('sensitivity', fontweight='bold', fontsize=12, fontproperties='Times New Roman')
+    plt.legend(loc='lower right', fontsize=8)
     plt.grid()
-    plt.savefig('models_test.png')
+    plt.savefig('models_test.svg', bbox_inches='tight', format='svg')
     plt.show()
 
 
@@ -246,13 +244,17 @@ def xlsx_to_csv(xlsx_data):
 if __name__ == '__main__':
     origin = pd.read_csv('data_csx.csv')
     columns = origin.columns[2:]
-    origin['术前支架植入'] = origin['术前支架植入'].astype('int')
-    label = origin.iloc[:, 1]
+    # origin['术前支架植入'] = origin['术前支架植入'].astype('int')
+    label = np.array(origin.iloc[:, 1])
     data = origin.iloc[:, 2:]
+    # origin = pd.read_csv('test_1.csv')
+    # label = origin.iloc[:, 0]
+    # data = origin.iloc[:, 1:]
+    plot_multiple_model_test_curves(data, label)
     # univariate_analysis(data, label, origin.columns[1:], XGBoost_none, {}, 'XGBoost')
     # plot_decision_curve_analysis_on_test_set(XGBoost_none, data, label, 'XGBoost')
     # plot_single_model_test_curve(XGBoost_none, np.array(data), np.array(label), 'XGBoost')
     # plot_multiple_model_test_curves(data, label)
-    xgboost_selective(data, label, columns)
-    XGBoost_selective(data, label, columns)
-    catboost_selective(data, label, columns)
+    # xgboost_selective(data, label, columns)
+    # XGBoost_selective(data, label, columns)
+    # catboost_selective(data, label, columns)

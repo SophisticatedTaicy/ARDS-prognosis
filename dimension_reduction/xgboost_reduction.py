@@ -1,29 +1,35 @@
+import os
+
 import numpy as np
 import pandas as pd
-import shap
 from matplotlib import pyplot as plt, pyplot
 from pandas import DataFrame
-from sklearn import metrics
-from sklearn.metrics import accuracy_score, roc_curve
-from xgboost import plot_importance, XGBClassifier
+from xgboost import XGBClassifier
 import xgboost as xgb
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split
 from pylab import mpl
-from filter.common import standard_data_by_white
+
+from filter.common import standard_data_by_white, read_file, judge_label_balance, format_label, concat_array
+from filter.param import outcome_dict
 
 
-def xgboost_selective(data, label, columns):
+def xgboost_selective(data, label, columns, x_test=None, y_test=None):
     '''
     :param data: 数据
     :param label: 标签
     :param name: 标签名
     :return: 特征重要性
     '''
-    x_train, x_test, y_train, y_test = train_test_split(np.array(data), label, test_size=0.25, shuffle=True,
-                                                        random_state=42)
+    mpl.rcParams['font.family'] = 'sans-serif'
+    mpl.rcParams['font.sans-serif'] = ['SimSun']
+    if x_test == None and y_test == None:
+        x_train, x_test, y_train, y_test = train_test_split(np.array(data), label, test_size=0.3, random_state=1232,
+                                                            shuffle=True)
+    else:
+        x_train = data
+        y_train = label
     x_train, x_test = standard_data_by_white(x_train, x_test)
     dtrain = xgb.DMatrix(x_train, label=y_train)
-    dtest = xgb.DMatrix(x_test)
     params = {
         'booster': 'gbtree',
         'objective': 'multi:softmax',  # 多分类的问题
@@ -41,7 +47,7 @@ def xgboost_selective(data, label, columns):
     # 使显示图标自适应
     plt.rcParams['figure.autolayout'] = True
     bst = xgb.train(params, dtrain, 100)
-    importances = xgb.get_score(importance_type='gain')
+    importances = xgb.get_score()
     coef_xgboosr = DataFrame({'var': columns, 'coef': importances})
     index_sort = np.abs(coef_xgboosr['coef']).sort_values().index
     coef_lr = coef_xgboosr.iloc[index_sort, :]
@@ -57,14 +63,11 @@ def xgboost_selective(data, label, columns):
     # 文本
     for i, coef in enumerate(coefs):
         plt.text(coef + 0.003, i, '%.3f' % coef, fontproperties='Times New Roman')
-    # y_pred = bst.predict(dtest)
-    # accuracy = accuracy_score(y_test, y_pred)
-    # print('accuracy : ' + str(accuracy))
-    # plt.figure(dpi=500)
-    # plot_importance(bst, title='feature importance', max_num_features=15, importance_type='gain', grid=False,
-    #                 height=0.5)
     plt.grid()
-    plt.savefig('../clinical_exam/xgboost.svg', bbox_inches='tight', format='svg')
+    # if x_test:
+    #     plt.savefig('xgboost.svg', bbox_inches='tight', format='svg')
+    # else:
+    #     plt.savefig('../clinical_exam/xgboost.svg', bbox_inches='tight', format='svg')
     plt.show()
     return bst
 
@@ -82,8 +85,6 @@ def XGBoost_selective(data, label, columns):
     coef_lr = coef_xgboosr.iloc[index_sort, :][-15:]
     vars = coef_lr['var']
     coefs = coef_lr['coef']
-    max = np.max(coefs)
-    min = np.min(coefs)
     mean = np.mean(coefs)
     # 分别绘制单变量分析结果图
     plt.figure(dpi=500)
@@ -95,19 +96,27 @@ def XGBoost_selective(data, label, columns):
     # 文本
     for i, coef in enumerate(coefs):
         plt.text(coef + 0.003, i, '%.3f' % coef)
-    plt.title('feature importance', fontweight='bold', fontproperties='Times New Roman')
-    plt.xlim([min - 0.01, max + 0.01])
-    plt.xlabel('F score', fontweight='bold', fontproperties='Times New Roman')
+    # plt.title('feature importance', fontweight='bold', fontproperties='Times New Roman')
+    # plt.xlabel('F score', fontweight='bold', fontproperties='Times New Roman')
+    plt.title('特征重要性', fontweight='bold')
+    plt.xlabel('F分数', fontweight='bold')
     plt.tight_layout()
-    plt.savefig('../clinical_exam/XGBoost.svg', bbox_inches='tight', format='svg')
-    pyplot.show()
+    if data.shape[0] > 50:
+        plt.savefig('XGBoost.svg', bbox_inches='tight', format='svg')
+    else:
+        plt.savefig('../clinical_exam/XGBoost.svg', bbox_inches='tight', format='svg')
+    plt.show()
 
 
-def catboost_selective(data, label, columns):
+def catboost_selective(data, label, columns, x_test=None, y_test=None):
     mpl.rcParams['font.family'] = 'sans-serif'
     mpl.rcParams['font.sans-serif'] = ['SimSun']
     from catboost import CatBoostClassifier
-    x_train, x_test, y_train, y_test = train_test_split(data, label, test_size=0.3, random_state=1232, shuffle=True)
+    if x_test == None and y_test == None:
+        x_train, x_test, y_train, y_test = train_test_split(data, label, test_size=0.2, random_state=1232, shuffle=True)
+    else:
+        x_train = data
+        y_train = label
     category_features = np.where(x_train.dtypes != np.float)
     # model = CatBoostClassifier(iterations=100, depth=5, learning_rate=0.5, cat_features=category_features,
     #                            loss_function='Logloss', logging_level='Verbose')
@@ -141,18 +150,12 @@ def catboost_selective(data, label, columns):
 
 
 if __name__ == '__main__':
-    fill_aver = pd.read_csv('../ARDS/eicu/pictures/0907/fill_with_0.csv', sep=',', encoding='utf-8')
-    static = fill_aver.iloc[:, 1:42]
-    dynamic = fill_aver.iloc[:, 42:205:3]
-    data = pd.concat([static, dynamic], axis=1)
-    labels = fill_aver.iloc[:, -5]
-    results = {'Spontaneous recovery': 0, 'Long stay': 1, 'Rapid death': 2}
-    for name, label in results.items():
-        label_new = []
-        for item in labels:
-            if item == label:
-                label_new.append(1)
-            else:
-                label_new.append(0)
-        label_new = np.array(label_new)
-        xgboost_selective(data, label_new, name)
+    total = pd.read_csv('../ARDS/combine/csvfiles/merge_data.csv')
+    coulmns = list(total.columns)
+    coulmns.remove('outcome')
+    labels = np.array(total['outcome'])
+    common_columns = coulmns
+    print(common_columns)
+    data = total[common_columns]
+    XGBoost_selective(data, labels, coulmns)
+    catboost_selective(data, labels, coulmns)
