@@ -204,7 +204,8 @@ class eICU_Acquisition:
 
 
 if __name__ == '__main__':
-    eicu = eICU_Acquisition(mutilprocess=False, process=20, issave=False)
-    eicu.get_ARDS_datas()
+    # eicu = eICU_Acquisition(mutilprocess=False, process=20, issave=False)
+    # eicu.get_ARDS_datas()
     # processer = Processing()
     # processer.format_ards_data('4')
+    query_sql.population_mean_value(0.5)

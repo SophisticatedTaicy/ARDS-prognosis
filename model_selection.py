@@ -18,7 +18,7 @@ from filter.common import read_file, format_label, standard_data_by_white, conca
 from filter.param import outcome_dict, colors
 from pylab import mpl
 
-from ml.classification.classify_parameter import searchCVnames_ab, GBDT_none
+from ml.classification.classify_parameter import searchCVnames_ab, GBDT_none, model_names_sec, base_models_sec
 
 base_picture_path = './ARDS/combine/pictures/'
 base_csv_path = './ARDS/combine/csvfiles'
@@ -30,19 +30,18 @@ from ARDS.data_process.process import Processing
 # 使用不同模型测试融合数据性能
 # 新增accuracy\precision\recall\f1-score
 def various_model(x_train, x_test, y_train, y_test, dataset_name, outcome):
-    plt.figure(figsize=(1.92, 2.12), dpi=150)
-    from ml.classification.classify_parameter import base_models
+    plt.figure(figsize=(1.92, 2.12))
     mpl.rcParams['font.family'] = 'sans-serif'
     mpl.rcParams['font.sans-serif'] = ['SimSun']
     # 将训练集和测试集白化
     x_train, x_test = standard_data_by_white(x_train, x_test)
-    anglish_chinese_dict = {
+    english_chinese_dict = {
         'Spontaneous Recovery': '自发恢复',
         'Long Stay': '长期住院',
         'Rapid Death': '快速死亡'
     }
     items = []
-    for name, model, color in zip(searchCVnames_ab, base_models, colors[:len(base_models)]):
+    for name, model, color in zip(model_names_sec, base_models_sec, colors[:len(base_models_sec)]):
         i = 0
         mean_tpr = []
         mean_fpr = np.linspace(0, 1, 1000)
@@ -70,41 +69,38 @@ def various_model(x_train, x_test, y_train, y_test, dataset_name, outcome):
             if name != 'LinR' and name != 'KNN' and name != 'BR':
                 y_predict = model.predict(x_test)
                 accuracy = accuracy_score(y_test, y_predict)
-                precision = precision_score(y_test, y_predict)
-                recall = recall_score(y_test, y_predict)
+                # precision = precision_score(y_test, y_predict)
+                # recall = recall_score(y_test, y_predict)
                 f1 = f1_score(y_test, y_predict)
             else:
                 accuracy = 0
-                precision = 0
-                recall = 0
+                # precision = 0
+                # recall = 0
                 f1 = 0
             mean_accuracy.append(accuracy)
-            mean_precision.append(precision)
-            mean_recall.append(recall)
+            # mean_precision.append(precision)
+            # mean_recall.append(recall)
             mean_f1.append(f1)
         mean_auc = np.round(auc(mean_fpr, mean_tpr), 2)
         mean_accuracy = np.round(np.mean(mean_accuracy), 2)
-        mean_precision = np.round(np.mean(mean_precision), 2)
-        mean_recall = np.round(np.mean(mean_recall), 2)
+        # mean_precision = np.round(np.mean(mean_precision), 2)
+        # mean_recall = np.round(np.mean(mean_recall), 2)
         mean_f1 = np.round(np.mean(mean_f1), 2)
-        item = (mean_auc, mean_accuracy, mean_precision, mean_recall, mean_f1)
-        print('model : %s evaluation baseline : %s' % (name, item))
+        item = (mean_auc, mean_accuracy, mean_f1)
+        print('outcome : %s model : %s evaluation baseline : %s' % (outcome, name, item))
         items.append(item)
-        plt.plot(mean_fpr[:-1:30], mean_tpr[:-1:30], label=r'%s(area=%.2f)' % (name, mean_auc), color=color,
-                 marker='o', markersize=0.6, lw=0.5)
-    plt.title(r'%s' % anglish_chinese_dict[outcome], fontweight='bold', fontsize=9)
+        # plt.plot(mean_fpr[:-1:30], mean_tpr[:-1:30], label=r'%s(area=%.2f)' % (name, mean_auc), color=color,
+        #          marker='o', markersize=0.6, lw=0.5)
+        plt.plot(mean_fpr[:-1:30], mean_tpr[:-1:30], label=r'%s(area=%.2f)' % (name, mean_auc), color=color, lw=0.5)
     plt.xlabel('假阳率', fontsize=9, fontweight='bold')
     plt.ylabel('真阳率', fontsize=9, fontweight='bold')
-    plt.yticks(np.arange(0, 1.05, 0.2), fontsize=7, fontproperties='Times New Roman')
-    plt.xticks(np.arange(0, 1.05, 0.2), fontsize=7, fontproperties='Times New Roman')
+    plt.yticks(np.arange(0, 1.05, 0.2), fontsize=6, fontproperties='Times New Roman')
+    plt.xticks(np.arange(0, 1.05, 0.2), fontsize=6, fontproperties='Times New Roman')
     plt.grid()
-    labelss = plt.legend(loc=4, fontsize=4).get_texts()
+    labelss = plt.legend(loc=4, fontsize=5).get_texts()
     [label.set_fontname('Times New Roman') for label in labelss]
-    plt.savefig(base_picture_path + '%s_%s_chinese_no_title.svg' % (outcome, dataset_name), bbox_inches='tight',
-                format='svg')
-    print(items)
-    DataFrame(items).to_csv('%s_evaluations.csv' % outcome
-                            , mode='w', index=False)
+    plt.savefig(base_picture_path + '%s_%s.svg' % (outcome, dataset_name), bbox_inches='tight', format='svg')
+    DataFrame(items).to_csv('%s_evaluations.csv' % outcome, mode='w', index=False)
     plt.show()
 
 
@@ -152,8 +148,10 @@ def various_outcome(datas, labels, model, name):
     plt.xticks(np.arange(0, 1.05, 0.2), fontsize=7, fontproperties='Times New Roman')
     plt.grid()
     plt.legend(loc=4, fontsize=6)
-    labelss = plt.legend(loc=4, fontsize=6).get_texts()
+    labelss = plt.legend(loc=4, fontsize=7).get_texts()
+    print(items)
     [label.set_fontname('Times New Roman') for label in labelss]
+    DataFrame(items).to_csv('model_evaluation_score.csv', index=False)
     plt.savefig(base_picture_path + '%s_chinese_no_title.svg' % name, bbox_inches='tight', format='svg')
     plt.show()
 

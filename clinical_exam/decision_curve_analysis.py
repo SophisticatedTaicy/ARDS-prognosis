@@ -10,14 +10,15 @@ from matplotlib import pyplot as plt, pyplot
 from pandas import DataFrame
 from sklearn import metrics
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix, roc_curve, auc
+from sklearn.metrics import confusion_matrix, roc_curve, auc, accuracy_score, precision_score, recall_score, f1_score
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from xgboost import XGBClassifier
 
+from dimension_reduction.xgboost_reduction import XGBoost_selective
 from filter.common import standard_data_by_white
 from filter.param import colors, marks
-from ml.classification.classify_parameter import  searchCVnames_ab_clinical, \
-    base_models_clical
+from ml.classification.classify_parameter import searchCVnames_ab_clinical, \
+    base_models_clical, XGBoost_none
 from pylab import mpl
 
 
@@ -25,6 +26,8 @@ from pylab import mpl
 # https://www.zxzyl.com/archives/1450/#:~:text=%E8%A7%A3%E8%AF%BB%E5%86%B3%E7%AD%96%E6%9B%B2%E7%BA%BF%E5%88%86%E6%9E%90
 
 def plot_single_model_test_curve(model, data, label, name):
+    mpl.rcParams['font.family'] = 'sans-serif'
+    mpl.rcParams['font.sans-serif'] = ['SimSun']
     x_train, x_test, y_train, y_test = train_test_split(data, label, test_size=0.2, shuffle=True, random_state=42)
     x_train, x_test = standard_data_by_white(x_train, x_test)
     # model_research = GridSearchCV(model, scoring='roc_auc', n_jobs=10, refit=True, cv=5, verbose=0)
@@ -53,16 +56,23 @@ def plot_single_model_test_curve(model, data, label, name):
     plt.plot(fpr, tpr, color='b', label=r'%s test (area=%0.3f)' % (name, auc), lw=1, linestyle='--', markersize=2)
     plt.xlim([-0.05, 1.05])
     plt.ylim([-0.05, 1.05])
-    plt.xlabel('1 - specificity', fontweight='bold', fontsize=15)
-    plt.ylabel('sensitivity', fontweight='bold', fontsize=15)
-    plt.title('%s  ROC' % name, fontsize=17)
+    plt.xlabel('1 - specificity', fontweight='bold', fontsize=15, fontproperties='Times New Roman')
+    plt.ylabel('sensitivity', fontweight='bold', fontsize=15, fontproperties='Times New Roman')
+    # plt.title('%s  ROC' % name, fontsize=17)
     plt.legend(loc='lower right', fontsize=7)
     plt.grid()
     plt.savefig('%s_test.png' % name)
     plt.show()
 
 
-def plot_multiple_model_test_curves(data, label):
+def plot_multiple_model_test_curves(data, label, flag):
+    """
+    @param data: feature data
+    @param label: labels
+    @param flag: 0/1 english/chinese
+    """
+    mpl.rcParams['font.family'] = 'sans-serif'
+    mpl.rcParams['font.sans-serif'] = ['SimSun']
     for model, name, color, mark in zip(base_models_clical, searchCVnames_ab_clinical, colors, marks):
         x_train, x_test, y_train, y_test = train_test_split(np.array(data), np.array(label), test_size=0.2,
                                                             shuffle=True, random_state=42)
@@ -77,91 +87,41 @@ def plot_multiple_model_test_curves(data, label):
         else:
             test_predict_proba = model.predict_proba(x_test)
             fpr, tpr, threshold = metrics.roc_curve(y_test, test_predict_proba[:, 1], pos_label=1)
-        auc = metrics.auc(fpr, tpr)
-        plt.plot(fpr, tpr, color=color, label=r'%s(area=%0.3f)' % (name, auc), lw=1, linestyle='--', marker=mark,
+        if name != 'LinR' and name != 'KNN' and name != 'BR':
+            y_predict = model.predict(x_test)
+            accuracy = np.round(accuracy_score(y_test, y_predict), 3)
+            precision = np.round(precision_score(y_test, y_predict), 3)
+            recall = np.round(recall_score(y_test, y_predict), 3)
+            f1 = np.round(f1_score(y_test, y_predict), 3)
+        else:
+            accuracy = 0
+            precision = 0
+            recall = 0
+            f1 = 0
+        auc = np.round(metrics.auc(fpr, tpr), 3)
+        plt.plot(fpr, tpr, color=color, label=r'%s(area=%.3f)' % (name, auc), lw=1, linestyle='--', marker=mark,
                  markersize=2)
-    plt.xlim([-0.05, 1.05])
-    plt.ylim([-0.05, 1.05])
-    plt.xlabel('1 - specificity', fontweight='bold', fontsize=12, fontproperties='Times New Roman')
-    plt.ylabel('sensitivity', fontweight='bold', fontsize=12, fontproperties='Times New Roman')
-    plt.legend(loc='lower right', fontsize=8)
-    plt.grid()
-    plt.savefig('models_test.svg', bbox_inches='tight', format='svg')
-    plt.show()
-
-
-def plot_decision_curve_analysis_on_test_set(model, data, label, name):
-    x_train, x_test, y_train, y_test = train_test_split(np.array(data), np.array(label), test_size=0.2, shuffle=True,
-                                                        random_state=42)
-    x_train, x_test = standard_data_by_white(x_train, x_test)
-    # model_research = GridSearchCV(model, scoring='roc_auc', n_jobs=10, refit=True, cv=5, verbose=0)
-    model.fit(x_train, y_train)
-    if name == 'Perceptron':
-        test_predict_proba = model._predict_proba_lr(x_test)
-        fpr, tpr, threshold = metrics.roc_curve(y_test, test_predict_proba[:, 1], pos_label=1)
-        net_benefit_model = calculate_net_benefit_model(threshold, test_predict_proba[:, 1], y_test)
-    elif name == 'LinearRegression' or name == 'BayesianRidge':
-        test_predict_proba = model.predict(x_test)
-        fpr, tpr, threshold = metrics.roc_curve(y_test, test_predict_proba, pos_label=1)
-        net_benefit_model = calculate_net_benefit_model(threshold, test_predict_proba, y_test)
+        print('model : %s auc : %s accuracy : %s precision : %s recall : %s f1 : %s' % (
+            name, auc, accuracy, precision, recall, f1))
+    plt.xticks(np.arange(0, 1.05, 0.2), fontsize=9, fontproperties='Times New Roman')
+    plt.yticks(np.arange(0, 1.05, 0.2), fontsize=9, fontproperties='Times New Roman')
+    if flag:
+        plt.xlabel('1 - 特异性', fontweight='bold', fontsize=12)
+        plt.ylabel('敏感度', fontweight='bold', fontsize=12)
     else:
-        test_predict_proba = model.predict_proba(x_test)
-        fpr, tpr, threshold = metrics.roc_curve(y_test, test_predict_proba[:, 1], pos_label=1)
-        net_benefit_model = calculate_net_benefit_model(threshold, test_predict_proba[:, 1], y_test)
-    net_benefit_all = calculate_net_benefit_all(threshold, y_test)
-    fig, ax = plt.subplots()
-    plot_DCA(ax, threshold, net_benefit_model, net_benefit_all)
+        plt.xlabel('1 - specificity', fontweight='bold', fontsize=12, fontproperties='Times New Roman')
+        plt.ylabel('sensitivity', fontweight='bold', fontsize=12, fontproperties='Times New Roman')
+    labels = plt.legend(loc='lower right', fontsize=8).get_texts()
+    [label.set_fontname('Times New Roman') for label in labels]
+    plt.grid()
+    if flag:
+        plt.savefig('models_test_chi.svg', bbox_inches='tight', format='svg')
+    else:
+        plt.savefig('models_test.svg', bbox_inches='tight', format='svg')
     plt.show()
 
 
-def calculate_net_benefit_model(thresh_group, y_pred_score, y_label):
-    net_benefit_model = np.array([])
-    for thresh in thresh_group:
-        y_pred_label = y_pred_score > thresh
-        tn, fp, fn, tp = confusion_matrix(y_label, y_pred_label).ravel()
-        n = len(y_label)
-        net_benefit = (tp / n) - (fp / n) * (thresh / (1 - thresh))
-        net_benefit_model = np.append(net_benefit_model, net_benefit)
-    return net_benefit_model
 
-
-def calculate_net_benefit_all(thresh_group, y_label):
-    net_benefit_all = np.array([])
-    tn, fp, fn, tp = confusion_matrix(y_label, y_label).ravel()
-    total = tp + tn
-    for thresh in thresh_group:
-        net_benefit = (tp / total) - (tn / total) * (thresh / (1 - thresh))
-        net_benefit_all = np.append(net_benefit_all, net_benefit)
-    return net_benefit_all
-
-
-def plot_DCA(ax, thresh_group, net_benefit_model, net_benefit_all):
-    # Plot
-    ax.plot(thresh_group, net_benefit_model, color='crimson', label='Model')
-    ax.plot(thresh_group, net_benefit_all, color='black', label='Treat all')
-    ax.plot((0, 1), (0, 0), color='black', linestyle=':', label='Treat none')
-
-    # Fill，显示出模型较于treat all和treat none好的部分
-    y2 = np.maximum(net_benefit_all, 0)
-    y1 = np.maximum(net_benefit_model, y2)
-    ax.fill_between(thresh_group, y1, y2, color='crimson', alpha=0.2)
-
-    # Figure Configuration， 美化一下细节
-    ax.set_xlim(0, 1)
-    ax.set_ylim(net_benefit_model.min() - 0.15, net_benefit_model.max() + 0.15)  # adjustify the y axis limitation
-    ax.set_xlabel(
-        xlabel='Threshold Probability',
-        fontdict={'family': 'Times New Roman', 'fontsize': 15}
-    )
-    ax.set_ylabel(
-        ylabel='Net Benefit',
-        fontdict={'family': 'Times New Roman', 'fontsize': 15}
-    )
-    ax.grid('major')
-    ax.spines['right'].set_color((0.8, 0.8, 0.8))
-    ax.spines['top'].set_color((0.8, 0.8, 0.8))
-    ax.legend(loc='upper right')
-    return ax
 
 
 # 使用aps数据，查找出各结果的最相关特征
@@ -237,24 +197,22 @@ def plot_univariate_analysis(vars, coefs, name):
 
 
 def xlsx_to_csv(xlsx_data):
+    # 将dataframe中某列的数据类型转换为int
+    # origin['术前支架植入'] = origin['术前支架植入'].astype('int')
     data_xls = pd.read_excel(xlsx_data)
-    data_xls.to_csv('data_csx.csv', float_format='%.2f', encoding='utf-8')
+    data_xls.to_csv('data_csx.csv', float_format='%.2f', encoding='utf-8', index=False)
 
 
 if __name__ == '__main__':
-    origin = pd.read_csv('data_csx.csv')
-    columns = origin.columns[2:]
-    # origin['术前支架植入'] = origin['术前支架植入'].astype('int')
-    label = np.array(origin.iloc[:, 1])
-    data = origin.iloc[:, 2:]
-    # origin = pd.read_csv('test_1.csv')
-    # label = origin.iloc[:, 0]
-    # data = origin.iloc[:, 1:]
-    plot_multiple_model_test_curves(data, label)
-    # univariate_analysis(data, label, origin.columns[1:], XGBoost_none, {}, 'XGBoost')
-    # plot_decision_curve_analysis_on_test_set(XGBoost_none, data, label, 'XGBoost')
+    origin = pd.read_csv('data_csx_m.csv')
+    columns = origin.columns[1:]
+    origin['术前支架植入'] = origin['术前支架植入'].astype('int')
+    origin['术前结石CT值'] = origin['术前结石CT值'].astype('float')
+    label = np.array(origin.iloc[:, 0])
+    data = origin.iloc[:, 1:]
+    # plot_multiple_model_test_curves(data, label, 1)
     # plot_single_model_test_curve(XGBoost_none, np.array(data), np.array(label), 'XGBoost')
     # plot_multiple_model_test_curves(data, label)
-    # xgboost_selective(data, label, columns)
-    # XGBoost_selective(data, label, columns)
+    XGBoost_selective(data, label, 0)
     # catboost_selective(data, label, columns)
+    # plot_decision_curve_analysis_on_test_set(XGBoost_none, data, label, 'XGBoost', 0)

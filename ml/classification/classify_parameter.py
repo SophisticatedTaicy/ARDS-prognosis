@@ -18,7 +18,7 @@ xgboost.set_config(verbosity=0)
 
 # 基础模型
 GBDT_none = GradientBoostingClassifier(n_estimators=100)
-XGBoost_none = XGBClassifier()
+XGBoost_none = XGBClassifier(n_estimators=400)
 RF_none = RandomForestClassifier()
 adaboost_none = AdaBoostClassifier()
 linearRegression_none = LinearRegression()
@@ -121,8 +121,8 @@ searchCVnames = ['GBDT', 'XGBoost', 'Random Forest', 'Boosting', 'Linear Regress
                  'Logistic Regression', 'KNN', 'Stacking', 'Decision Tree', 'SVM', 'Perceptron']
 searchCVnames_ab = ['GBDT', 'XGBoost', 'RF', 'Boosting', 'LinR', 'Bagging', 'BR', 'LogR', 'KNN', 'Stacking', 'DT',
                     'SVM', 'Perceptron']
-searchCVnames_ab_clinical = ['GBDT', 'XGBoost', 'RF', 'Boosting', 'LinR', 'Bagging', 'BR', 'KNN', 'Stacking', 'DT', 'SVM',
-                    'Perceptron']
+searchCVnames_ab_clinical = ['GBDT', 'XGBoost', 'RF', 'AdaBoost', 'LinR', 'Bagging', 'BR', 'KNN', 'Stacking', 'DT',
+                             'SVM', 'Perceptron']
 GBDT_tunned = GradientBoostingClassifier(learning_rate=0.01, n_estimators=750, max_depth=6, max_features='log2',
                                          subsample=0.5)
 GBDT_origin = GradientBoostingClassifier(max_depth=6, max_leaf_nodes=1, n_estimators=25)
@@ -145,8 +145,10 @@ tunned_model = [GBDT_tunned, XGB_tunned, RF_tunned, adaboost_tunned, bagging_tun
                 BayesRidge_tunned, LR_tunned, linearreg_tunned, Perceptron_tunned]
 base_models = [GBDT_none, XGBoost_none, RF_none, adaboost_none, linearRegression_none, bagging_none, BayesRidge_none,
                LR_none, KNN_none, stacking_none, DT_none, SVM_none, Perceptron_none]
-base_models_clical = [GBDT_none, XGBoost_none, RF_none, adaboost_none, linearRegression_none, bagging_none, BayesRidge_none,
-               KNN_none, stacking_none, DT_none, SVM_none, Perceptron_none]
+base_models_clical = [GBDT_none, XGBoost_none, RF_none, adaboost_none, linearRegression_none, bagging_none,
+                      BayesRidge_none, KNN_none, stacking_none, DT_none, SVM_none, Perceptron_none]
+base_models_sec = [XGBoost_none, RF_none, linearRegression_none, DT_none, SVM_none, BayesRidge_none, LR_none, KNN_none]
+model_names_sec = ['XGBoost', 'RF', 'LinR', 'DT', 'SVM', 'BR', 'LogR', 'KNN']
 params = [GBDT_param, XGB_param, RF_param, adaboost_param, bagging_param, LR_param, SVM_param, Perceptron_param]
 GBDT_SR = GradientBoostingClassifier(learning_rate=0.015, n_estimators=700, max_depth=6, max_features='log2',
                                      subsample=0.5)
