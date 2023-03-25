@@ -14,11 +14,11 @@ import os
 
 from sklearn.model_selection import train_test_split
 
-from filter.common import read_file, format_label, standard_data_by_white, concat_array, save_file
+from filter.common import read_file, format_label, standard_data_by_white, concat_array
 from filter.param import outcome_dict, colors
 from pylab import mpl
 
-from ml.classification.classify_parameter import searchCVnames_ab, GBDT_none, model_names_sec, base_models_sec
+from ml.classification.classify_parameter import model_names_sec, base_models_sec
 
 base_picture_path = './ARDS/combine/pictures/'
 base_csv_path = './ARDS/combine/csvfiles'
@@ -48,8 +48,6 @@ def various_model(x_train, x_test, y_train, y_test, dataset_name, outcome):
         tprs = []
         items = []
         mean_accuracy = []
-        mean_precision = []
-        mean_recall = []
         mean_f1 = []
         while i < 10:
             model.fit(x_train, y_train)

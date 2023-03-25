@@ -7,7 +7,7 @@ import psycopg2
 from pandas import DataFrame
 
 import filter.param
-from filter.common import filter_invalid_dynamic_items
+from filter.common import filter_invalid_dynamic_items, filter_invalid_items_by_name
 from filter.param import EICU_DATABASE, USER, PASSWORD, HOST, PORT, EICU_SEARCH_PATH, dynamic_item_list
 
 
@@ -1064,6 +1064,7 @@ def compute_dynamic(id, data, header):
     if p_f:
         new_data += p_f
     new_data.sort()
+    filter_invalid_dynamic_items(new_data)
     # 动态数据中位数，方差，变化率的计算
     # deal with dynamic data :
     # 1.id:X,drug:[~],dignosis:[~],personsonlist:[~],itemexample:{min, max, mean, std, perce_25, perce_50, perce_75, median, variance,change_rate, [dicts]}
@@ -1126,69 +1127,8 @@ def compute_dynamic(id, data, header):
     return header, dynamic_dict
 
 
-def population_mean_value(weight):
-    """
-    @param weight:
-    dynamic formulation:weight *sqrt(sum(pow(xi-p_mean,2))/m)+(1-weight)*sqrt(sum(pow(xi-i_mean,2))/m)
-    where p_mean population mean value for each dynamic item, i_mean is the mean value of single person for each dynamic value,
-     xi is each specific value for each dynamic item,m is the sum number for non 0 value
-    @return list of static and dynamic
-    """
-    from filter.param import drug_list, diagnosis_abbrevation_list, person_info_list
-    # 1.compute mean value of each record
-    # 2. compute mean value of non 0 mean values
-    # data = pd.read_csv('../csvfiles/dynamic_1207.csv')
-    header = ['id'] + drug_list + diagnosis_abbrevation_list + person_info_list + dynamic_item_list + ['outcome']
-    # data.to_csv('../csvfiles/dynamic.csv', mode='w', header=header, index=False, encoding='utf-8')
-    data = pd.read_csv('../csvfiles/dynamic.csv')
-    # compute the population mean values
-    p_means = []
-    for name in dynamic_item_list:
-        # each dynamic item
-        item = data[name]
-        # transfer str to tuple
-        item = [eval(i) for i in item]
-        # compute population mean value
-        p_item_means = [float(i[2]) for i in item if float(i[2]) > 0]
-        if len(p_item_means) > 0:
-            p_mean = np.round(np.mean(p_item_means), 3)
-        else:
-            p_mean = 0
-        p_means.append(p_mean)
-    # print(p_means)
-    data = np.array(data)
-    # the result list
-    res_list = []
-    for item in data:
-        # print(item)
-        # got static item
-        res = list(np.array(item[:42]))
-        dynamics = np.array(item[42:-1])
-        # print('res : %s dynamics : %s ' % (res, dynamics))
-        for dynamic, p_mean in zip(dynamics, p_means):
-            # print('item : %s, type: %s,eval type : %s, len : %s, eval len :%s ' % (
-            #     dynamic, type(dynamic), type(eval(dynamic)), len(dynamic), len(eval(dynamic))))
-            # print('id : %s dynamic item : %s ' % (item[0], p_mean))
-            dynamic = eval(dynamic)
-            dynamic_items = list(dynamic[10].values())
-            i_mean = np.mean(dynamic_items)
-            # print('dynamic_items : %s mean : %s' % (dynamic_items, i_mean))
-            leng = len(dynamic_items)
-            if i_mean <= 0 or leng <= 0:
-                dynamic_i = 0
-            else:
-                i_sum = 0
-                p_sum = 0
-                for i in dynamic_items:
-                    i_sum += pow(i - i_mean, 2)
-                    p_sum += pow(i - p_mean, 2)
-                dynamic_i = round(weight * sqrt(i_sum / leng) + (1 - weight) * sqrt(p_sum / leng), 2)
-            res.append(dynamic_i)
-        res.append(item[-1])
-        # print(res)
-        res_list.append(res)
-    DataFrame(res_list).to_csv('../csvfiles/hxd.csv', mode='w', header=header, index=False, encoding='utf-8')
-    # print(item_means)
+
+
 
 
 def isCommon(t1, t2):

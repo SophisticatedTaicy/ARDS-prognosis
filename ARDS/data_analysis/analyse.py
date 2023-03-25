@@ -416,7 +416,7 @@ class analysis_plot:
         # self.patient_consist(data)
         self.plot_hospital_stay(data)
         # self.admission_source_word_cloud_plot(data)
-        self.admission_source_plot(data, vertical=True)
+        # self.admission_source_plot(data, vertical=False)
         # severity = data['severity']
         # details = data['detail']
         # self.filter_death_by_severity(details, severity)
@@ -446,6 +446,7 @@ class analysis_plot:
                 final_txt_list = final_txt_list + (column_mark + ',') * mark_sum
             with open('pictures/' + dataset_name + '_diagnosis_chinese_word_cloud.txt', 'w') as f:
                 f.write(final_txt_list)
+
         fig = plt.figure()
         sub_plots = [221, 222, 223, 224]
         pic = imageio.imread('pictures/img.png')
@@ -465,7 +466,8 @@ class analysis_plot:
         plt.show()
 
     def admission_source_plot(self, data, vertical=False):
-        fig, ax = plt.subplots(figsize=(1.97, 3.94), dpi=150)
+        # fig, ax = plt.subplots(figsize=(1.97, 3.94), dpi=150)
+        fig, ax = plt.subplots()
         ax.grid(zorder=0)
         mpl.rcParams['font.family'] = 'sans-serif'
         mpl.rcParams['font.sans-serif'] = ['SimSun']
@@ -523,24 +525,30 @@ class analysis_plot:
             plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
             plt.yticks([])
         else:
+            mpl.rcParams['font.family'] = 'sans-serif'
+            mpl.rcParams['font.sans-serif'] = ['SimSun']
             width = 0.2
             for sub_data, name, rate, color in zip(data, dataset_names, rates, colors):
                 sub_admission = sub_data[diagnosis_abbrevation_list]
                 chinese, english = trans_admission_word_count(sub_admission, True, 5)
-                x = np.arange(len(english))
-                mpl.rcParams['font.sans-serif'] = ['Time New Roman']
-                plt.bar(x + rate * width, english.values(), width, yerr=0.005, label=name, color=color, zorder=5,
-                        error_kw={'ecolor': '0.2', 'capsize': 6})
-                for a, b, label in zip(x + rate * width, list(english.values()), english.keys()):
+                x = np.arange(len(chinese))
+                # x = np.arange(5, 0, -1) + rate * width
+                # mpl.rcParams['font.sans-serif'] = ['Time New Roman']
+                plt.bar(x + rate * width, chinese.values(), width, yerr=0.005, label=name, color=color, zorder=5,
+                        error_kw={'ecolor': '0.1', 'capsize': 6})
+                for a, b, label in zip(x + rate * width, list(chinese.values()), chinese.keys()):
                     # plt.text(a, b, label, rotation=30, wrap=False)
-                    plt.text(a, b, label, rotation=-90, wrap=True, verticalalignment='center', zorder=6)
-            ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=1))
-            plt.ylabel('Percentage of Admission Diagnosis', fontweight='bold', fontsize=12)
-            plt.xlabel('Admission Diagnosis', fontweight='bold', fontsize=12)
-        # plt.title('入院诊断前五项', fontweight='bold', fontsize=12)
-        labelss = plt.legend(labels=dataset_names, loc=4, fontsize=6).get_texts()
+                    plt.text(a - 0.02, b - 0.01, label, rotation=-90, wrap=True, verticalalignment='center', zorder=6,
+                             fontsize=12)
+            ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1))
+            plt.ylabel('占比', fontweight='bold', fontsize=15)
+            # plt.ylabel('前五项入院诊断', fontweight='bold', fontsize=15, labelpad=10)
+            # plt.ylabel('Percentage of Admission Diagnosis', fontweight='bold', fontsize=15)
+            # plt.xlabel('Admission Diagnosis', fontweight='bold', fontsize=15)
+        # plt.title('前五项入院诊断', fontweight='bold', fontsize=15)
+        labelss = plt.legend(labels=dataset_names, loc=1, fontsize=12).get_texts()
         [label.set_fontname('Times New Roman') for label in labelss]
-        plt.savefig('admission_chinese.svg', bbox_inches='tight', format='svg', pad_inches=0.1)
+        plt.savefig('admission_max.svg', bbox_inches='tight', format='svg', pad_inches=0.1)
         plt.show()
 
     def plot_hospital_stay(self, data):
@@ -558,46 +566,47 @@ class analysis_plot:
         colors = ['#8ECFC9', '#FFBE7A', '#FA7F6F', '#82B0D2']
         sns.set_context('paper', rc={'lines.linewidth': 1})
         # fig, axes = plt.subplots(ncols=2, nrows=1, figsize=(3.35, 1.97), dpi=150)
-        plt.subplots(figsize=(1.97, 3.94), dpi=150)
-        plt.subplot(211)
+        # plt.subplots(figsize=(1.97, 3.94), dpi=150)
+        plt.subplot(121)
         for i, color, name in zip(range(len(data)), colors, dataset_names):
             hospital_data = data[i][['hospital']]
             # hospital_data.plot(kind='kde', label=name)
             sns.distplot(hospital_data, vertical=True, hist=False, kde=False, fit=stats.norm,
                          fit_kws={'color': color, 'linestyle': '-'},
-                         kde_kws={'label': name + '_' + stay_type[0], 'linestyle': '-'})
+                         kde_kws={'label': name + '_' + stay_type[0]})
         # plt.ylabel('Days', fontsize=12, fontweight='bold')
         # plt.xlabel('Density', fontsize=12, fontweight='bold')
-        plt.ylabel('天数', fontsize=9, fontweight='bold', y=0)
+        plt.title('医院住院', fontsize=15, fontweight='bold')
+        plt.ylabel('天数', fontsize=15, fontweight='bold', y=0.5)
         # plt.xlabel('密度', fontsize=12, fontweight='bold')
         # ax1.set_ylabel('天数', fontsize=12, fontweight='bold')
         # ax1.set_xlabel('密度', fontsize=12, fontweight='bold')
-        plt.xticks(np.arange(0, 0.062, 0.02), fontsize=8, fontproperties='Times New Roman')
-        plt.yticks(np.arange(0, 62, 20), fontsize=8, fontproperties='Times New Roman')
+        plt.xticks(np.arange(0, 0.062, 0.02), fontsize=10, fontproperties='Times New Roman')
+        plt.yticks(np.arange(0, 62, 20), fontsize=10, fontproperties='Times New Roman')
         # ax1.set_xticks(np.arange(0, 0.062, 0.02), fontsize=7, fontproperties='Times New Roman')
         # ax1.set_yticks(np.arange(0, 62, 20), fontsize=7, fontproperties='Times New Roman')
         plt.xlim([0, 0.062])
         # ax1.set_xlim([0, 0.062])
         plt.ylim([0, 62])
         plt.grid()
-        # matplotlib.rcParams.update({'font.size': 6})
+        matplotlib.rcParams.update({'font.size': 15})
         # plt.legend(labels=dataset_names, title='Hospital Stay', fontsize=6)
-        plt.legend(labels=dataset_names, title='医院住院', fontsize=9)
+        # plt.legend(labels=dataset_names, title='医院住院', fontsize=15)
         # ax1.legend(labels=dataset_names, title='医院住院', fontsize=7)
-        labelss = plt.legend(labels=dataset_names, title='医院住院', fontsize=9, frameon=False).get_texts()
+        labelss = plt.legend(labels=dataset_names, fontsize=15, frameon=False).get_texts()
         [label.set_fontname('Times New Roman') for label in labelss]
-        plt.subplot(212)
+        plt.subplot(122)
         for i, color, name in zip(range(len(data)), colors, dataset_names):
             unit_data = data[i][['unit']]
             # unit_data.plot(kind='kde', label=name)
             sns.distplot(unit_data, vertical=True, hist=False, kde=False, fit=stats.norm,
                          kde_kws={'label': name + '_' + stay_type[1]},
                          fit_kws={'color': color, 'linestyle': 'dashed'})
-        # plt.xlabel('Density', fontsize=12, fontweight='bold')
-        plt.xticks(np.arange(0, 0.062, 0.02), fontsize=8, fontproperties='Times New Roman')
-        # plt.yticks(np.arange(0, 62, 20), fontsize=8, fontproperties='Times New Roman')
+        plt.xticks(np.arange(0, 0.062, 0.02), fontsize=10, fontproperties='Times New Roman')
+        plt.yticks(np.arange(0, 62, 20), fontsize=10, fontproperties='Times New Roman')
+        plt.title('重症监护室住院', fontsize=15, fontweight='bold')
         # ax2.set_xlabel('密度', fontsize=12, fontweight='bold')\
-        plt.xlabel('密度', fontsize=9, fontweight='bold')
+        plt.xlabel('密度', fontsize=15, fontweight='bold', x=-0.1)
         # ax2.set_xticks(np.arange(0, 0.062, 0.02), fontsize=8, fontproperties='Times New Roman')
         # ax2.set_yticks(np.arange(0, 62, 20), fontsize=7, fontproperties='Times New Roman')
         plt.xlim([0, 0.062])
@@ -605,11 +614,11 @@ class analysis_plot:
         plt.ylim([0, 62])
         # plt.legend(labels=dataset_names, title='ICU Stay', fontsize=6)
         # plt.legend(labels=dataset_names, title='重症监护室住院', fontsize=7)
-        labelss = plt.legend(labels=dataset_names, title='重症监护室住院', fontsize=9, frameon=False).get_texts()
+        labelss = plt.legend(labels=dataset_names, fontsize=15, frameon=False).get_texts()
         [label.set_fontname('Times New Roman') for label in labelss]
         plt.grid()
-        plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
-        plt.savefig('hospital_stay_chinese.svg', bbox_inches='tight', format='svg')
+        # plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
+        plt.savefig('hospital_stay_max.svg', bbox_inches='tight', format='svg')
         plt.show()
 
     # plot stacked histogram for each datasets and group them up into a union

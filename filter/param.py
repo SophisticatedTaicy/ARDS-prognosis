@@ -23,6 +23,8 @@ drug_detail_list = ['warfarin\nuse', 'dobutamine\nuse', 'dopamine\nuse', 'epinep
                     'vasopressor\nuse']
 drug_list = ['warfarin', 'dobutamine', 'dopamine', 'epinephrine', 'heparin', 'milrinone', 'norepinephrine',
              'phenylephrine', 'vasopressin', 'vasopressor']
+drug_list_chi = ['华法林', '多巴酚丁胺', '多巴胺', '肾上腺素', '肝素', '米力农', '去甲肾上腺素', '去氧肾上腺素', '加压素', '血管加压药'
+                 ]
 diagnosis_abbrevation_list = ['ACSD', 'AMI', 'ARF', 'Arrhythmia', 'Asthma_Emphysema', 'Cancer', 'Cardiac_Arrest',
                               'Cardiogenic_Shock', 'CardM', 'CardO', 'CAS', 'CPUO', 'Coma', 'CABG',
                               'Diabetic_Ketoacidosis', 'GI_Bleed', 'GI_Obstruction', 'Neurologic', 'Overdose',
@@ -73,6 +75,8 @@ mimic_dynamic_dict = {'albumin': 'albumin', 'ALT': 'alt', 'AST': 'ast', 'bands':
                       'NI_BP_mean': 'NI_BP_mean',
                       'NI_BP_systolic': 'NI_BP_systolic', 'Respiratory Rate': 'rr', 'hematocrit': 'hematocrit'}
 
+dynamic_file_header = ['id'] + drug_list + diagnosis_abbrevation_list + person_info_list + dynamic_item_list + [
+    'outcome']
 extra_list = ['outcome', 'detail', 'unit', 'hospital', 'status_28', 'severity', 'identification', 'enrollment']
 aps_header = ['id'] + drug_list + diagnosis_abbrevation_list + person_info_list + ['dialysis', 'meds', 'Eyes', 'motor',
                                                                                    'verbal', 'urine', 'wbc',
@@ -83,6 +87,7 @@ aps_header = ['id'] + drug_list + diagnosis_abbrevation_list + person_info_list 
                                                                                    'albumin', 'pao2',
                                                                                    'pco2', 'bun', 'glucose',
                                                                                    'bilirubin', 'FIO2'] + extra_list
+
 aps_part_header = drug_detail_list + diagnosis_list + person_info_list + ['dialysis', 'meds', 'Eyes', 'motor', 'verbal',
                                                                           'urine', 'wbc', 'Temperature',
                                                                           'respiratoryrate', 'sodium', 'heartrate',
@@ -178,10 +183,18 @@ result_header = ['id'] + drug_list + diagnosis_abbrevation_list + person_info_li
 xiu_header = ['id'] + drug_list + diagnosis_abbrevation_list + person_info_list + special_list(dynamic_item_list,
                                                                                                ['median', 'std',
                                                                                                 'mean']) + extra_list
+second_header = drug_list + ['disease'] + person_info_list + special_list(dynamic_item_list, ['var', 'weighted']) + [
+    'outcome']
 outcome_dict = {
     'Spontaneous Recovery': 0,
     'Long Stay': 1,
     'Rapid Death': 2
+}
+
+outcome_dict_chi = {
+    '自发恢复': 0,
+    '长期住院': 1,
+    '快速死亡': 2
 }
 
 apache_header = ['id', 'gender', 'teachtype', 'admitsource', 'age', 'admitdiagnosis', 'meds', 'thrombolytics',
