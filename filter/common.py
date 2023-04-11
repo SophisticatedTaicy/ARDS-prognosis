@@ -232,6 +232,11 @@ def filter_invalid_dynamic_items(data):
 
 
 def filter_invalid_items_by_name(data, name):
+    dynamic_min = [0, 7, 10, 0, 0, 0, 5, 3.4, 0, 0, 10, 0, 0, 20, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 6.5, 0, 0, 20, -1000,
+                   95, 30, 0, 5, 4, 80, 80, -1000, -5, 3.4, 1, 1, 1, 0, 0, 0, 0, 30, 30, 30, 30, 30, 30, 30, 1, 14]
+    dynamic_max = [7, 1000, 1000, 70, 1, 1, 40, 20, 115, 50, 45, 8, 8, 100, 500, 16, 15, 10, 15, 10, 100, 650, 650, 25,
+                   7.7, 1000, 12, 160, 1000, 215, 45, 60, 30, 50, 100, 100, 1000, 100, 20, 40, 60, 80, 4, 15, 6, 5, 175,
+                   150, 150, 250, 150, 150, 250, 40, 55]
     dynamic_names = ['albumin', 'ALT', 'AST', 'bands', 'Base Excess', 'basos', 'bicarbonate', 'bilirubin', 'BUN',
                      'calcium', 'CO2', 'creatinine', 'eos', 'FIO2', 'glucose', 'Hemoglobin', 'INR', 'ionized calcium',
                      'lactate', 'magnesium', 'paCO2', 'paO2', 'P/F ratio', 'PEEP', 'pH', 'platelets', 'potassium',
@@ -239,26 +244,19 @@ def filter_invalid_items_by_name(data, name):
                      'SpO2', 'TV', 'CVP', 'ETCO2', 'diastolic_PAP', 'mean_PAP', 'systolic_PAP', 'Eyes', 'GCS', 'Motor',
                      'Verbal', 'Heart Rate', 'I_BP_diastolic', 'I_BP_mean', 'I_BP_systolic', 'NI_BP_diastolic',
                      'NI_BP_mean', 'NI_BP_systolic', 'Respiratory Rate', 'hematocrit']
-    dynamic_min = [0, 7, 10, 0, 0, 0, 5, 3.4, 0, 0, 10, 0, 0, 20, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 6.5, 0, 0, 20, -1000,
-                   95, 30, 0, 5, 4, 80, 80, -1000, -5, 3.4, 1, 1, 1, 0, 0, 0, 0, 30, 30, 30, 30, 30, 30, 30, 1, 14]
-    dynamic_max = [7, 1000, 1000, 70, 1, 1, 40, 20, 115, 50, 45, 8, 8, 100, 500, 16, 15, 10, 15, 10, 100, 650, 650, 25,
-                   7.7, 1000, 12, 160, 1000, 215, 45, 60, 30, 50, 100, 100, 1000, 100, 20, 40, 60, 80, 4, 15, 6, 5, 175,
-                   150, 150, 250, 150, 150, 250, 40, 55]
     item_index = dynamic_names.index(name)
     item_min = dynamic_min[item_index]
     item_max = dynamic_max[item_index]
     new_data = []
-    print('before item name : %s min : %s max : %s origin : %s ' % (name, item_min, item_max, data))
-    for item in data:
-        if item[0] == name:
-            if item[1] > max or item[1] < min:
+    # print('before item name : %s min : %s max : %s origin : %s ' % (name, item_min, item_max, data))
+    if len(data) > 0:
+        for item in data:
+            if item > item_max or item < item_min:
                 continue
             else:
                 new_data.append(item)
-            if name == 'P/F ratio':
-                print(item)
-    print('after filter : %s' % (new_data))
-    # new_data = np.array(new_data)
+    else:
+        return []
     return new_data
 
 

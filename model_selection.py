@@ -18,7 +18,7 @@ from filter.common import read_file, format_label, standard_data_by_white, conca
 from filter.param import outcome_dict, colors
 from pylab import mpl
 
-from ml.classification.classify_parameter import model_names_sec, base_models_sec
+from ml.classification.classify_parameter import model_names_sec, base_models_sec, searchCVnames, base_models
 
 base_picture_path = './ARDS/combine/pictures/'
 base_csv_path = './ARDS/combine/csvfiles'
@@ -40,8 +40,11 @@ def various_model(x_train, x_test, y_train, y_test, dataset_name, outcome):
         'Long Stay': '长期住院',
         'Rapid Death': '快速死亡'
     }
-    items = []
-    for name, model, color in zip(model_names_sec, base_models_sec, colors[:len(base_models_sec)]):
+    result_dict = {}
+    result_dict['auc'] = []
+    result_dict['f1'] = []
+    result_dict['model'] = searchCVnames
+    for name, model, color in zip(searchCVnames, base_models, colors[:len(base_models)]):
         i = 0
         mean_tpr = []
         mean_fpr = np.linspace(0, 1, 1000)
@@ -54,8 +57,8 @@ def various_model(x_train, x_test, y_train, y_test, dataset_name, outcome):
             if name == 'Perceptron':
                 test_predict_proba = model._predict_proba_lr(x_test)
                 fpr, tpr, threshold = roc_curve(y_test, test_predict_proba[:, 1], pos_label=1)
-            # elif name == 'Linear Regression' or name == 'Bayesian Ridge':
-            elif name == 'LinR' or name == 'BR':
+            elif name == 'Linear Regression' or name == 'Bayesian Ridge':
+                # elif name == 'LinR' or name == 'BR':
                 test_predict_proba = model.predict(x_test)
                 fpr, tpr, threshold = roc_curve(y_test, test_predict_proba, pos_label=1)
             else:
@@ -64,31 +67,24 @@ def various_model(x_train, x_test, y_train, y_test, dataset_name, outcome):
             tprs.append(interp(np.linspace(0, 1, 1000), fpr, tpr))
             mean_tpr = np.mean(tprs, axis=0)
             i += 1
-            if name != 'LinR' and name != 'KNN' and name != 'BR':
+            # if name != 'LinR' and name != 'KNN' and name != 'BR':
+            if name != 'Linear Regression' and name != 'KNN' and name != 'Bayesian Ridge':
                 y_predict = model.predict(x_test)
                 accuracy = accuracy_score(y_test, y_predict)
-                # precision = precision_score(y_test, y_predict)
-                # recall = recall_score(y_test, y_predict)
                 f1 = f1_score(y_test, y_predict)
             else:
                 accuracy = 0
-                # precision = 0
-                # recall = 0
                 f1 = 0
             mean_accuracy.append(accuracy)
-            # mean_precision.append(precision)
-            # mean_recall.append(recall)
             mean_f1.append(f1)
         mean_auc = np.round(auc(mean_fpr, mean_tpr), 2)
+        result_dict['auc'].append(mean_auc)
         mean_accuracy = np.round(np.mean(mean_accuracy), 2)
-        # mean_precision = np.round(np.mean(mean_precision), 2)
-        # mean_recall = np.round(np.mean(mean_recall), 2)
         mean_f1 = np.round(np.mean(mean_f1), 2)
+        result_dict['f1'].append(mean_f1)
         item = (mean_auc, mean_accuracy, mean_f1)
         print('outcome : %s model : %s evaluation baseline : %s' % (outcome, name, item))
         items.append(item)
-        # plt.plot(mean_fpr[:-1:30], mean_tpr[:-1:30], label=r'%s(area=%.2f)' % (name, mean_auc), color=color,
-        #          marker='o', markersize=0.6, lw=0.5)
         plt.plot(mean_fpr[:-1:30], mean_tpr[:-1:30], label=r'%s(area=%.2f)' % (name, mean_auc), color=color, lw=0.5)
     plt.xlabel('假阳率', fontsize=9, fontweight='bold')
     plt.ylabel('真阳率', fontsize=9, fontweight='bold')
@@ -97,8 +93,9 @@ def various_model(x_train, x_test, y_train, y_test, dataset_name, outcome):
     plt.grid()
     labelss = plt.legend(loc=4, fontsize=5).get_texts()
     [label.set_fontname('Times New Roman') for label in labelss]
-    plt.savefig(base_picture_path + '%s_%s.svg' % (outcome, dataset_name), bbox_inches='tight', format='svg')
-    DataFrame(items).to_csv('%s_evaluations.csv' % outcome, mode='w', index=False)
+    DataFrame(result_dict).to_csv('%s_result.csv' % outcome, mode='w', index=False)
+    # plt.savefig(base_picture_path + '%s_%s.svg' % (outcome, dataset_name), bbox_inches='tight', format='svg')
+    # DataFrame(items).to_csv('%s_evaluations.csv' % outcome, mode='w', index=False)
     plt.show()
 
 

@@ -9,7 +9,6 @@ import numpy as np
 from pandas import DataFrame
 
 import query_sql
-from ARDS.data_process.process import Processing
 from ARDS.eicu.data_extraction.query_sql import Query
 from filter.common import save_file, init_dict, log_print, read_file
 from filter.param import result_header

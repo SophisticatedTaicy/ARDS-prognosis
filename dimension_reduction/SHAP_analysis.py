@@ -32,12 +32,6 @@ def shap_analysis(data, label, name):
     player_explainer['base+sum'] = player_explainer['base'] + player_explainer['sum']
     shap.initjs()
     shap.force_plot(explainer.expected_value, shap_values, data)
-    # shap.summary_plot(shap_values, data)
-    # shap.summary_plot(shap_values, data, plot_type="bar")
-    # pd.DataFrame(shap_values).iloc[:, -1].apply(lambda x: abs(x)).mean()
-    # shap.dependence_plot('GCS_median', shap_values, data, interaction_index=None, show=False)
-    # shap_interaction_values = shap.TreeExplainer(model).shap_interaction_values(data)
-    # shap.summary_plot(shap_interaction_values, data, max_display=4)
 
 
 if __name__ == '__main__':

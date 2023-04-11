@@ -21,6 +21,7 @@ xgboost.set_config(verbosity=0)
 # 基础模型
 GBDT_none = GradientBoostingClassifier(n_estimators=100)
 XGBoost_none = XGBClassifier()
+XGBoost = XGBClassifier()
 RF_none = RandomForestClassifier()
 adaboost_none = AdaBoostClassifier()
 linearRegression_none = LinearRegression()
@@ -34,7 +35,7 @@ SVM_none = SVC(probability=True)
 NaiveBayes_none = MultinomialNB()
 Perceptron_none = Perceptron()
 base_param = {'n_estimators': [25], 'learning_rate': [0.01]}
-CatBoost_none = CatBoostClassifier()
+CatBoost_none = CatBoostClassifier(logging_level='Silent')
 LightGBM_none = lgb.LGBMClassifier()
 # 手动参数
 GBDT = GradientBoostingClassifier(max_depth=6, max_features='log2')

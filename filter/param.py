@@ -48,15 +48,15 @@ diagnosis_key_names = ['cancer', 'arrhythmia', 'cardiac arrest', 'cardiogenic sh
                        'valve replacement', 'respiratory', 'ards', 'cardiovascular']
 person_info_list = ['admitsource', 'gender', 'age', 'BMI', 'admission_score']
 
-dynamic_item_list = ['albumin', 'ALT', 'AST', 'bands', 'Base Excess', 'basos', 'bicarbonate', 'bilirubin', 'BUN',
-                     'calcium', 'CO2', 'creatinine', 'eos', 'FIO2', 'glucose', 'Hemoglobin', 'INR', 'ionized calcium',
-                     'lactate', 'magnesium', 'paCO2', 'paO2', 'P/F ratio', 'PEEP', 'pH', 'platelets', 'potassium',
-                     'PTT', 'PIP', 'sodium', 'Temperature', 'WBC', 'Mean Airway Pressure', 'Plateau Pressure', 'SaO2',
-                     'SpO2', 'TV', 'CVP', 'ETCO2', 'diastolic_PAP', 'mean_PAP', 'systolic_PAP', 'Eyes', 'GCS', 'Motor',
-                     'Verbal', 'Heart Rate', 'I_BP_diastolic', 'I_BP_mean', 'I_BP_systolic', 'NI_BP_diastolic',
-                     'NI_BP_mean', 'NI_BP_systolic', 'Respiratory Rate', 'hematocrit']
-dynamic_median_list = special_list(dynamic_item_list, ['median'])
-dynamic_detail_list = special_list(dynamic_item_list, ['median', 'variances', 'changerate'])
+dynamic_list = ['albumin', 'ALT', 'AST', 'bands', 'Base Excess', 'basos', 'bicarbonate', 'bilirubin', 'BUN',
+                'calcium', 'CO2', 'creatinine', 'eos', 'FIO2', 'glucose', 'Hemoglobin', 'INR', 'ionized calcium',
+                'lactate', 'magnesium', 'paCO2', 'paO2', 'P/F ratio', 'PEEP', 'pH', 'platelets', 'potassium',
+                'PTT', 'PIP', 'sodium', 'Temperature', 'WBC', 'Mean Airway Pressure', 'Plateau Pressure', 'SaO2',
+                'SpO2', 'TV', 'CVP', 'ETCO2', 'diastolic_PAP', 'mean_PAP', 'systolic_PAP', 'Eyes', 'GCS', 'Motor',
+                'Verbal', 'Heart Rate', 'I_BP_diastolic', 'I_BP_mean', 'I_BP_systolic', 'NI_BP_diastolic',
+                'NI_BP_mean', 'NI_BP_systolic', 'Respiratory Rate', 'hematocrit']
+dynamic_median_list = special_list(dynamic_list, ['median'])
+dynamic_detail_list = special_list(dynamic_list, ['median', 'variances', 'changerate'])
 mimic_dynamic_dict = {'albumin': 'albumin', 'ALT': 'alt', 'AST': 'ast', 'bands': 'bands',
                       'Base Excess': 'base excess', 'basos': 'basos', 'bicarbonate': 'bicarbonate',
                       'bilirubin': 'bilirubin', 'BUN': 'bun', 'calcium': 'calcium', 'CO2': 'co2',
@@ -74,8 +74,12 @@ mimic_dynamic_dict = {'albumin': 'albumin', 'ALT': 'alt', 'AST': 'ast', 'bands':
                       'I_BP_systolic': 'arterial blood pressure s', 'NI_BP_diastolic': 'NI_BP_diastolic',
                       'NI_BP_mean': 'NI_BP_mean',
                       'NI_BP_systolic': 'NI_BP_systolic', 'Respiratory Rate': 'rr', 'hematocrit': 'hematocrit'}
-
-dynamic_file_header = ['id'] + drug_list + diagnosis_abbrevation_list + person_info_list + dynamic_item_list + [
+dynamic_min = [0, 7, 10, 0, 0, 0, 5, 3.4, 0, 0, 10, 0, 0, 20, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 6.5, 0, 0, 20, -1000,
+               95, 30, 0, 5, 4, 80, 80, -1000, -5, 3.4, 1, 1, 1, 0, 0, 0, 0, 30, 30, 30, 30, 30, 30, 30, 1, 14]
+dynamic_max = [7, 1000, 1000, 70, 1, 1, 40, 20, 115, 50, 45, 8, 8, 100, 500, 16, 15, 10, 15, 10, 100, 650, 650, 25,
+               7.7, 1000, 12, 160, 1000, 215, 45, 60, 30, 50, 100, 100, 1000, 100, 20, 40, 60, 80, 4, 15, 6, 5, 175,
+               150, 150, 250, 150, 150, 250, 40, 55]
+dynamic_file_header = ['id'] + drug_list + diagnosis_abbrevation_list + person_info_list + dynamic_list + [
     'outcome']
 extra_list = ['outcome', 'detail', 'unit', 'hospital', 'status_28', 'severity', 'identification', 'enrollment']
 aps_header = ['id'] + drug_list + diagnosis_abbrevation_list + person_info_list + ['dialysis', 'meds', 'Eyes', 'motor',
@@ -180,14 +184,17 @@ final_item_dict = {'CPUO': '胸痛', 'Hemoglobin_changerate': '血红蛋白', 'a
 
 univariate_header = drug_list + diagnosis_abbrevation_list + person_info_list + dynamic_median_list
 result_header = ['id'] + drug_list + diagnosis_abbrevation_list + person_info_list + dynamic_detail_list + extra_list
-xiu_header = ['id'] + drug_list + diagnosis_abbrevation_list + person_info_list + special_list(dynamic_item_list,
+xiu_header = ['id'] + drug_list + diagnosis_abbrevation_list + person_info_list + special_list(dynamic_list,
                                                                                                ['median', 'std',
                                                                                                 'mean']) + extra_list
-second_header = drug_list + ['disease'] + person_info_list + special_list(dynamic_item_list, ['var', 'weighted']) + [
+second_header = drug_list + ['disease'] + person_info_list + special_list(dynamic_list, ['var', 'weighted']) + [
     'outcome']
+second_header_2 = drug_list + diagnosis_abbrevation_list + person_info_list + special_list(dynamic_list,
+                                                                                           ['var', 'weighted']) + [
+                      'outcome']
 outcome_dict = {
-    'Spontaneous Recovery': 0,
-    'Long Stay': 1,
+    # 'Spontaneous Recovery': 0,
+    # 'Long Stay': 1,
     'Rapid Death': 2
 }
 
