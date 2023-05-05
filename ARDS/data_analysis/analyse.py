@@ -11,7 +11,7 @@ from pandas import DataFrame
 from scipy import stats
 
 import filter.param
-from filter.common import read_file, concat_array
+from filter.common import read_file
 from filter.param import *
 from matplotlib import ticker
 from pylab import mpl

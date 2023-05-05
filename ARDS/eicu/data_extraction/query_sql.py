@@ -1110,9 +1110,9 @@ def compute_dynamic(id, data, header):
                 median = temp[0]
             if size >= 2:
                 if size % 2 == 0:
-                    median = (temp[int(len(temp) / 2) - 1] + temp[int(len(temp) / 2)]) / 2
+                    median = (temp[int(size / 2) - 1] + temp[int(size / 2)]) / 2
                 else:
-                    median = temp[int(len(temp) / 2)]
+                    median = temp[int(size / 2)]
                 variance = np.round(np.var(temp), 3)
                 if min < 0.0001:
                     change_rate = 0
@@ -1125,10 +1125,6 @@ def compute_dynamic(id, data, header):
             min, max, mean, std, per_25, per_50, per_75, median, variance, change_rate, dynamic_temp)
     dynamic_dict['outcome'] = header['outcome']
     return header, dynamic_dict
-
-
-
-
 
 
 def isCommon(t1, t2):
